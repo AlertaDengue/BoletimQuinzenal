@@ -25,10 +25,72 @@ options(knitr.duplicate.label = "allow")
 options(scipen = 999999)
 
 # Sys.setenv(LANG = "en")
-Sys.setlocale("LC_TIME", "C")
+Sys.setlocale("LC_TIME", "pt_BR.UTF-8")
 ```
 
-\input{title}
+\newgeometry{top=20mm, left=10mm, bottom=20mm} 
+\pagecolor{UoDDarkBlue}\afterpage{\nopagecolor}
+
+\includegraphics[width=5cm]{images/info_dengue_logo_reverted.png}
+<!-- \begin{center} -->
+\vspace*{1cm}
+
+\fontsize{70}{75}\selectfont \textcolor{white}{\textbf{Boletim}}
+
+\fontsize{70}{75}\selectfont \textcolor{white}{\textbf{Quinzenal}}
+
+\vspace{10mm}
+\Large\textcolor{white}{\textbf{Boletim de situação das arboviroses urbanas no Brasil}}
+
+\vspace{120mm}
+
+\normalsize
+\textcolor{white}{`r format(Sys.Date(), format="%d %B %Y")`}
+
+<!-- \textcolor{white}{Second Author} -->
+
+<!-- \textcolor{white}{And Another} -->
+
+<!-- \textcolor{white}{And Another} -->
+
+
+\thispagestyle{empty}
+
+
+<!-- \end{center} -->
+\restoregeometry   
+\newpage
+
+
+\begin{center}
+\vspace{2cm}
+\textbf{INFORME INFODENGUE}
+
+\textbf{Boletim de situação das arboviroses urbanas no Brasil}
+
+
+\textit{Análises com base nos dados inseridos no SINAN ONLINE até o dia XX/XX/XXXX.\\
+Semana epidemiológica xy: INÍCIO – FIM}
+
+\vspace{2cm}
+\textbf{AVISOS:}
+\end{center}
+
+Todas as análises do InfoDengue são baseadas nos casos notificados, sem excluir os casos descartados. Isso ocorre devido à grande heterogeneidade no descarte de casos e porque a análise visa ser oportuna, não sendo viável esperar pelo tempo necessário para os testes laboratoriais. Portanto, utiliza-se um sistema de nowcasting para a predição de dados.
+
+Os dados provenientes dos sistemas de notificação de casos podem conter erros de digitação ou preenchimento, afetando um ou mais dos diversos campos de registro. Por isso, as notificações são constantemente avaliadas para correções necessárias, conforme a análise da rede de vigilância e das equipes locais responsáveis por cada registro.
+
+\vspace{\fill}
+\textbf{Créditos:}
+
+Produção:
+
+Autoria:
+
+Como citar:  
+
+\newpage
+
 \input{sections/resumo_executivo}
 \input{sections/introducao}
 \input{sections/metodos}
