@@ -1,0 +1,36 @@
+---
+website: https://info.dengue.mat.br/
+compact-title: no
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: no
+    fig_caption: yes
+    includes:
+      in_header: preamble.tex
+theme: metropolis
+documentclass: report
+editor_options:
+  chunk_output_type: console
+---
+
+```{r, comment = "", setup, include = FALSE}
+knitr::opts_chunk$set(message = FALSE, echo = FALSE, 
+                      dpi = 600, warning = F)
+
+knitr::knit_hooks$set(crop = knitr::hook_pdfcrop)
+knitr::opts_chunk$set(message=F, echo = F, warning = F, dpi = 300)
+knitr::opts_chunk$set(fig.pos = "!H", out.extra = "")
+options(knitr.duplicate.label = "allow")
+options(scipen = 999999)
+
+# Sys.setenv(LANG = "en")
+Sys.setlocale("LC_TIME", "C")
+```
+
+\input{title}
+\input{sections/resumo_executivo}
+\input{sections/introducao}
+\input{sections/metodos}
+\input{sections/resultados}
+\input{sections/ficha_tecnica}

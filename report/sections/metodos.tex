@@ -1,0 +1,95 @@
+\section{Métodos}
+
+\subsection{Dados}
+% decricao das variaveis e suas fontes. 
+
+A plataforma Mosqlimate trabalha sobre vários fluxos de dados com acesso por meio de endpoints disponiveis em https://api.mosqlimate.org/datastore/: 
+
+ \textbf{Dados de Incidência.}Um endpoint dá acesso a dados do projeto Infodengue, que fornece uma série de variáveis epidemiológicas para todos os municípios brasileiros em uma escala de tempo semanal. 
+ 
+\textbf{Dados  da expansão da dengue, zika e chikungunya no Brasil }sao obtidos do projeto Epi-Scanner, que recupera e analisa  informações dos dados de incidência atualizados do Infodengue  
+ \textbf{P}\textbf{revisões} \textbf{climáticas}. Por meio deste endpoint da API, é possível buscar várias variáveis climáticas que foram extraídas para todos os municípios brasileiros em uma escala de tempo diária a partir dos dados de reanálise baseados em satélite fornecidos pelo Copernicus ERA5. Dados de temperatura e umidade são obtidos das \href{https://estacoes.dengue.mat.br/}{estações meteorológicas} de aeroportos assim como de imagens de satélite.
+
+ \textbf{D}\textbf{ados} \textbf{de} \textbf{densidade} \textbf{populacional} \textbf{de} \textbf{mosquitos} (\textbf{Ovicounter}): Este endpoint tem como função acesso aos dados de abundância de mosquitos do projeto Contaovos, codesenvolvido pelo projeto Mosqlimate. Esses dados são baseados em armadilhas de ovos distribuídas por todo o Brasil de acordo com um design de monitoramento especificado pelo Ministério da Saúde. 
+
+ \textbf{Dados demográficos:} Para o cálculo de indicadores epidemiológicos, dados demográficos dos municípios brasileiros são atualizados a cada ano no Infodengue, utilizando as estimativas do \href{https://www.ibge.gov.br/pt/inicio.html}{IBGE.}
+
+As variáveis disponiveis para o conjunto de endpoints estao listadas a seguir: 
+
+\begin{enumerate}
+    \item Semana epidemiológica
+    \item Número acumulado de casos no ano 
+    \item Número estimado de casos por semana usando o modelo de nowcasting (nota: Os valores são atualizados retrospectivamente a cada semana)
+    \item Intervalo de credibilidade de 95\% do número estimado de casos
+    \item Número de casos notificados por semana (Os valores são atualizados retrospectivamente todas as semanas)
+    \item Probabilidade de (Rt> 1). Para emitir o alerta laranja, usamos o critério p\_rt1> 0,95 por 3 semanas ou mais.
+    \item Taxa de incidência estimada por 100.000
+    \item Divisão submunicipal (atualmente implementada apenas no Rio de Janeiro)
+    \item Nível de alerta (1 = verde, 2 = amarelo, 3 = laranja, 4 = vermelho)
+    \item Índice numérico
+    \item Estimativa pontual do número reprodutivo de casos (Rt)
+    \item População estimada (IBGE)
+    \item Média das temperaturas mínimas diárias ao longo da semana
+    \item Média das temperaturas diárias ao longo da semana
+    \item Média das temperaturas máximas diárias ao longo da semana
+    \item Média da umidade relativa mínima diária do ar ao longo da semana
+    \item Média da umidade relativa diária do ar ao longo da semana
+    \item Média da umidade relativa máxima diária do ar ao longo da semana
+    \item Receptividade climática, ou seja, condições para alta capacidade vetorial onde 
+    \begin{enumerate}
+        \item 0 = desfavorável
+        \item 1 = favorável
+        \item  2 = favorável nesta semana e na semana passada 
+        \item 3 = favorável por pelo menos três semanas (suficiente para completar um ciclo de transmissão)
+    \end{enumerate}
+    \item Evidência de transmissão sustentada onde: 
+    \begin{enumerate}
+        \item 0 = nenhuma evidência
+        \item 1 = possível
+        \item  2 = provável
+        \item 3 = altamente provável
+    \end{enumerate}
+    \item Incidência estimada abaixo do limiar pré-epidemia onde, 
+    \begin{enumerate}
+        \item 1 = acima do limiar pré-epidemia, mas abaixo do limiar epidêmico
+    \end{enumerate}
+    \begin{enumerate}
+        \item 2 = acima do limiar epidêmico
+    \end{enumerate}
+
+
+\end{enumerate}
+
+
+\subsection{Desafios}
+
+% descrever os desafios (que periodos e UFs)
+O desafio foi composto por duas etapas, dois testes de validação e uma meta de previsão. Os testes de validação e previsão consistiram em prever o número semanal de casos de dengue por estado (UF) nas temporadas 2022-2023 e 2023-2024 usando dados de casos notificados entre 2010 a 2023; enquanto a meta de previsão consistiu em prever o número semanal de casos de dengue no Brasil, e por estado (UF), na temporada 2024-2025 utilizando dados do período de 2010 a 2024. 
+
+O período das previsões foi entre a semana epidemiológica (SE) 41 de um ano e a SE 40 do ano seguinte, que corresponde a uma temporada típica de dengue no Brasil. Os conjuntos de dados de treinamento e seu respectivo dicionário de variáveis foram disponibilizados na plataforma Mosqlimate. Em geral, o conjunto de dados continha dados epidemiológicos, demográficos e climáticos de acesso aberto, atualizáveis e disponíveis para todos os estados brasileiros.
+
+Todas as previsões da equipe foram cadastradas na plataforma Mosqlimate, usando a seguinte ferramenta de registro https://api.mosqlimate.org/models/.  A plataforma, que esta projetada para comparar experimentos de previsão de arbovírus realiza as analises conforme metricas de avaliaçao definidas pela equipe. 
+ 
+
+
+\subsection{Scores de avaliação dos modelos}
+
+% nao precisa colocar formulas, podemos só explicar o que são, o que eles medem,  e citar o github. 
+O desempenho de cada modelo foi avaliado utilizando um conjunto de pontuações e métricas que consideraram o início da epidemia e o pico da epidemia e o intervalo de tempo, maximizando a correlação cruzada entre previsões e dados. 
+
+ Analisando os resultados de cada predição, foi calculado um score que indicava os melhores resultados gerados pelos modelos propostos para cada estado e cada ano, correspondente aos testes de validação e previsão. Para cada ano e estado, os modelos foram avaliados de acordo com a pontuação e a semana epidemiológica prevista e com base nessas pontuações, os modelos de concordância foram classificados com diferentes scores. Uma classificação global também foi calculada utilizando um método semelhante. 
+
+A pontuação logarítmica, CRPS e pontuação de intervalo foram calculadas usando o pacote Python \textbackslash{}href\{https://github.com/Mosqlimate-project/mosqlimate-client/tree/main\}{mosqlient\}, que captura as previsões da API e as compara usando algumas pontuações implementadas no pacote Python scoringrules.
+
+Finalmente, um modelo ensemble foi treinado para produzir previsões para 2025 utilizando os melhores modelos, únicos ou combinados. Para o ensemble, finalmente, os modelos foram adicionados incrementalmente, seguindo a ordem de classificação até que não houvessem mais melhoria no desempenho do modelo. 
+
+ 
+\subsection{Modelos utilizados}
+
+\subsection{Construção de ensembles}
+
+\subsection{Forecast para 2025}
+
+
+
+

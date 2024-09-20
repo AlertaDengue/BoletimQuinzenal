@@ -1,0 +1,40 @@
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{afterpage}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+\usepackage{fix-cm}
+\usepackage{lipsum}
+\usepackage{sectsty}
+\usepackage{xcolor}
+
+\definecolor{UoDBlue}{RGB}{67, 101, 226}
+\definecolor{UoDDarkBlue}{RGB}{61, 88, 151}
+\definecolor{UoDLightBlue}{RGB}{209,226,242}
+
+\def\chpcolor{cyan!80!blue}
+\def\chpcolortxt{cyan!80!blue}
+
+\usepackage{fontspec}
+\setromanfont{BaxterSans}[
+    Path=./Baxter/,
+    Extension = .otf,
+    UprightFont=*-Regular,
+    BoldFont=*-Bold,
+    ItalicFont=*-RegularItalic,
+    BoldItalicFont=*-BoldItalic
+    ]
+
+\sectionfont{\color{UoDBlue}}
+\subsectionfont{\color{UoDBlue}}
+
+\pagestyle{fancy}
+% \lhead{}
+\rhead{\includegraphics[width=2cm]{images/info_dengue_logo.png}}
