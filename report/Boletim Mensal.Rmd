@@ -1,0 +1,285 @@
+---
+website: https://info.dengue.mat.br/
+compact-title: no
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: no
+    fig_caption: yes
+    includes:
+      in_header: preamble.tex
+theme: metropolis
+documentclass: report
+editor_options:
+  chunk_output_type: console
+---
+
+```{r, comment = "", setup, include = FALSE}
+knitr::opts_chunk$set(message = FALSE, echo = FALSE, 
+                      dpi = 600, warning = F)
+
+knitr::knit_hooks$set(crop = knitr::hook_pdfcrop)
+knitr::opts_chunk$set(message=F, echo = F, warning = F, dpi = 300)
+knitr::opts_chunk$set(fig.pos = "!H", out.extra = "")
+options(knitr.duplicate.label = "allow")
+options(scipen = 999999)
+
+# Sys.setenv(LANG = "en")
+Sys.setlocale("LC_TIME", "pt_BR.UTF-8")
+```
+
+```{r}
+r_pkgs <- c("tidyverse", "AlertTools", "sf",
+            "ggplot2", "janitor", "kableExtra", 
+            "sjstats", "sjPlot", "gt")
+
+if(!"pacman" %in% rownames(installed.packages())) install.packages("pacman")
+pacman::p_load(char = r_pkgs)
+source("scripts/funcoes_extras.R")
+```
+
+```{r}
+# Parametros
+ano <- 2024
+```
+
+```{r}
+## 1. carregar parametros MEM e list de cidades
+load("data/mem2023.RData") # no AlertaDengueAnalise
+load("data/cidades.RData") # cidades (list de muns, regionais)
+
+# 2.2 Opcao 2. carregar tabela de dados (depois substituir pela API)
+load("data/restab_den.RData") # dengue
+df_dengue <- restab_den %>%
+  filter(SE > ano * 100) %>% left_join(muns)
+
+load("data/restab_chi.RData") # chik
+df_chik <- restab_chik %>%
+  filter(SE > ano * 100) %>% left_join(muns)
+rm(restab_den, restab_chik)
+
+# 3. Importar shape das regionais
+shape <- st_read("shape/rs_450_RepCor1.shp") %>% 
+  mutate(
+    primary.id = as.numeric(primary.id)
+  )
+```
+
+```{r}
+# Dengue
+df_dengue_nacional <- df_dengue %>% obter_metricas_nacionais() #Nacional
+df_dengue_uf <- df_dengue %>% obter_metricas_estaduais() # Estadual
+df_dengue_total <- df_dengue %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
+df_dengue_macro <- df_dengue %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
+df_dengue_reg <- df_dengue %>% obter_metricas_regionais_por_semana() # Regional
+se_max_dengue  <- max(df_dengue$SE) # Semana epidemiologia mais recente
+tabela_dengue <- obter_tabela(df = df_dengue, df_mem = memUFanual, se_max_dengue) # Tabela Estadual
+
+df_dengue_reg_se <- df_dengue_reg %>% 
+  filter(SE == se_max_dengue) %>%
+  select(regional_id, UF, pop, incest)
+
+tabela_reg_dengue <- obter_metricas_por_regional(
+  df_mem_anual = memReganual, df_regional_por_se = df_dengue_reg_se
+  )
+tab_pop_risco_dengue <- tabela_reg_dengue %>% obter_pop_sob_risco()
+tabela_reg_dengue <- obter_classificacao_das_regionais(df_dengue_reg, tabela_reg_dengue)
+shape_dengue <- shape %>%
+  left_join(tabela_reg_dengue, join_by("primary.id" == "regional_id"))
+
+gg_pop_risco_dengue <- tab_pop_risco_dengue %>% 
+  gg_bar_pop_risco()
+
+gg_map_risco_classif_dengue <- gg_map_risco_classif(shape = shape_dengue, se_max = se_max_dengue)
+```
+
+
+```{r}
+# Chikungunya
+df_chik_nacional <- df_chik %>%  obter_metricas_nacionais() #Nacional
+df_chik_uf <- df_chik %>% obter_metricas_estaduais() # Estadual
+df_chik_total <- df_chik %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
+df_chikv_macro <- df_chik %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
+df_chik_reg <- df_chik %>% obter_metricas_regionais_por_semana() # Regional
+se_max_chik  <- max(df_chik_uf$SE) # Semana epidemiologia mais recente
+tabela_chik <- obter_tabela(df = df_chik, df_mem = memUFanual, se_max_chik) # Tabela Estadual
+
+df_chik_reg_se <- df_chik_reg %>% 
+  filter(SE == se_max_chik) %>%
+  select(regional_id, UF, pop, incest)
+
+tabela_reg_chik <- obter_metricas_por_regional(
+  df_mem_anual = memReganual, df_regional_por_se = df_chik_reg_se
+  )
+tab_pop_risco_chik <- tabela_reg_chik %>% obter_pop_sob_risco()
+tabela_reg_chik <- obter_classificacao_das_regionais(df_chik_reg, tabela_reg_chik)
+shape_chik <- shape %>%
+  left_join(tabela_reg_chik, join_by("primary.id" == "regional_id"))
+
+gg_pop_risco_chik <- tab_pop_risco_chik %>% 
+  gg_bar_pop_risco()
+
+gg_map_risco_classif_chik <- gg_map_risco_classif(shape = shape_chik, se_max = se_max_chik)
+```
+
+
+\newgeometry{top=20mm, left=10mm, bottom=20mm} 
+\pagecolor{UoDDarkBlue}\afterpage{\nopagecolor}
+
+\includegraphics[width=5cm]{images/info_dengue_logo_reverted.png}
+<!-- \begin{center} -->
+\vspace*{1cm}
+
+\fontsize{70}{75}\selectfont \textcolor{white}{\textbf{Boletim}}
+
+\fontsize{70}{75}\selectfont \textcolor{white}{\textbf{Quinzenal}}
+
+\vspace{10mm}
+\Large\textcolor{white}{\textbf{Boletim de situação das arboviroses urbanas no Brasil}}
+\newline
+\normalsize
+\textcolor{white}{`r format(Sys.Date(), format="%d %B %Y")`}
+\vspace{120mm}
+
+
+
+<!-- \textcolor{white}{Second Author} -->
+
+<!-- \textcolor{white}{And Another} -->
+
+<!-- \textcolor{white}{And Another} -->
+
+
+\thispagestyle{empty}
+
+
+<!-- \end{center} -->
+\restoregeometry   
+\newpage
+
+
+\begin{center}
+\vspace{2cm}
+\textbf{INFORME INFODENGUE}
+
+\textbf{Boletim de situação das arboviroses urbanas no Brasil}
+
+
+\textit{Análises com base nos dados inseridos no SINAN ONLINE até o dia XX/XX/XXXX.\\
+Semana epidemiológica xy: INÍCIO – FIM}
+
+\vspace{2cm}
+\textbf{AVISOS:}
+\end{center}
+
+Todas as análises do InfoDengue são baseadas nos casos notificados, sem excluir os casos descartados. Isso ocorre devido à grande heterogeneidade no descarte de casos e porque a análise visa ser oportuna, não sendo viável esperar pelo tempo necessário para os testes laboratoriais. Portanto, utiliza-se um sistema de nowcasting para a predição de dados.
+
+Os dados provenientes dos sistemas de notificação de casos podem conter erros de digitação ou preenchimento, afetando um ou mais dos diversos campos de registro. Por isso, as notificações são constantemente avaliadas para correções necessárias, conforme a análise da rede de vigilância e das equipes locais responsáveis por cada registro.
+
+\vspace{\fill}
+\textbf{Créditos:}
+
+Produção:
+
+Autoria:
+
+Como citar:  
+
+\newpage
+
+\begin{center}
+\vspace{2cm}
+\textbf{PRINCIPAIS PONTOS EM DESTAQUE}
+\vspace{2cm}
+\end{center}
+
+<!-- Texto humano -->
+\begin{itemize}
+\item Atualmente, quase todas as UFs estão com notificação baixa ou em tendência de queda de notificação de dengue. 
+\item Amapá, Roraima, Rondônia e Paraíba apresentam tendência de aumento de casos estimados, 
+\item Redução no número de municípios isolados no sul, sudeste e nordeste em alerta de transmissão alta para os padrões históricos.. 
+\item A curva de incidência parece apresentar um leve padrão de ascendência no momento, diferente do padrão previsto de queda , conforme é visível na figura 1..
+\end{itemize}
+
+\newpage
+\textbf{Situação das Arboviroses no Brasil}
+\vspace{2cm}
+
+Esse boletim analisa as condições de transmissão da chikungunya e dengue no Brasil utilizando dados de clima e notificação de casos fornecidos pela Secretaria de Vigilância em Saúde (SVS). A partir desses dados são analisadas as condições de receptividade climática, transmissão e incidência (ver definição), tendo como objetivo contribuir para a tomada de decisão na sala de situação.
+Esse ano foram notificados até o momento, $XXX$ casos suspeitos de dengue, o que corresponde a uma incidência acumulada de $XXX$ casos por 100.000 habitantes. Esse valor corresponde a $xxx\%$ do registrado no ano passado, no mesmo período. Desse total, $x\%$ são classificados como prováveis. 
+A tabela mostra a mesma informação para chikungunya e zika.
+
+
+\textbf{Tabela 1.} Casos notificados de arboviroses até a semana XX
+
+<!-- Adicionar tabela 1 -->
+
+
+\textbf{Casos Acumulados por Estados}
+
+Na figura abaixo estão representadas as incidências de casos notificados acumulados por 100 mil habitantes até a semana XX, em comparação com as incidências históricas dos últimos 5 anos .
+
+<!-- Adicionar figura 1 -->
+
+Figura 1. Incidência acumulada por 100 mil habitantes sobre os casos notificados até a semana xx
+
+As curvas de casos semanais de dengue e chikungunya são apresentadas na figura abaixo, com o nowcast (a figura parece com essa.). Observa-se que está (dentro/fora) do previsto.
+
+<!-- Adicionar figura 2 -->
+
+Figura 2. Curvas de previsão de casos semanais no Brasil  para Dengue e Chikungunya  
+
+As curvas de casos abaixo apresentam as incidências de casos suspeitos notificados,por estado, e os casos estimados de acordo com o nowcast:  
+
+<!-- Adicionar figura 3 -->
+
+Figura 3. Incidência de casos suspeitos de arboviroses (chikungunya + dengue) para as Unidades da Federação.
+
+\newpage
+\textbf{Panorama da tendência dos novos casos de arboviroses em todo o país até a semana atual}
+\vspace{2cm}
+
+A figura abaixo mostra xx …  
+
+Tabela 2. Situação dos estados em relação à notificação dos casos de dengue em 2024
+
+<!-- Adicionar tabela 2 -->
+
+A figura abaixo mostra xx …  
+(fazer o mesmo pra chik)
+
+
+\textbf{Estados / Regionais com aumento de Casos }
+\vspace{2cm}
+
+Do total de 450 regionais, x estão indicando alta incidência de suspeição de dengue (Figura 4). No Amazonas, na região do Alto Juruá e Triângulo esse indicador aponta aumento. No nordeste, observa-se a 9a região de saúde no Alagoas, 9a na Paraíba, Baturité no CE. No sudeste, Mananciais em SP. 
+
+
+Figura 4. Regionais de saúde que estão com notificação alta e com sinais de queda (amarelo) ou estabilidade (marrom). 
+
+Durante a última quinzena, algumas regionais (estados?) apresentaram mudanças nos padrões de notificação. Segue um panorama geral das principais mudanças: 
+NONONONO
+
+
+\newpage
+\textbf{OBSERVAÇÕES SOBRE A METODOLOGIA}
+\vspace{2cm}
+
+A atualização dos dados pode resultar em mudanças nas estimativas. Para detalhes sobre as metodologias, consultar o site do Infodengue e as referências citadas ao fim do documento. 
+
+\vspace{2cm}
+\textbf{AUTORES}
+\textbf{Equipe do Infodengue:} Claudia Torres Codeço$^{a}$,Leonardo Soares Bastos$^{a}$, Oswaldo Gonçalves Cruza$^{a}$, Sara de Souza Oliveira$^{a}$, Eduardo Correa Araujo$^{d}$, Raquel Martins Lana$^{b}$, Danielle Andreza da Cruz Ferreira$^{a}$, Vinicius Barbosa Godinho$^{a}$, Sandro Locha$^{a}$, Luã Bida Vacaro$^{d}$, Lucas Monteiro Bianchi$^{a}$, Thais Irene Souza Riback$^{a}$, Iasmim Ferreira de Almeida$^{a}$, and Flávio Codeço Coelho$^{a}$. 
+
+$^{a}$Scientific Computing Program, Oswaldo Cruz Foundation, Brazil
+
+$^{b}$Barcelona Supercomputing Center (BSC), Barcelona, Spain
+
+$^{c}$Federal University of Minas Gerais, Brazil
+
+$^{d}$School of Applied Math, Getulio Vargas Foundation, Brazil
+
+
+
+
+<!-- \input{sections/resumo_executivo} -->
