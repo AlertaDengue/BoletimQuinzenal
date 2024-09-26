@@ -6,13 +6,18 @@
 .RData
 .RDataTmp
 
+# Excel files
+*.xlsx
+*.xls
+*.csv
+
 # User-specific files
 .Ruserdata
 
 # Example code in package build process
 *-Ex.R
 
-# Output files from R CMD build
+# Output files from R CMD build 
 /*.tar.gz
 
 # Output files from R CMD check
@@ -48,3 +53,7 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Env
+venv/
+.venv
