@@ -35,7 +35,7 @@ r_pkgs <- c("tidyverse", "AlertTools", "sf",
 
 if(!"pacman" %in% rownames(installed.packages())) install.packages("pacman")
 pacman::p_load(char = r_pkgs)
-source("scripts/funcoes_extras.R")
+source("../scripts/funcoes_extras.R", encoding = "UTF-8")
 ```
 
 ```{r, include = FALSE}
@@ -44,11 +44,11 @@ ano <- 2024
 ```
 
 ```{r, include = FALSE}
-load(file = "data/muns.R") 
+load(file = "../data/muns.R") 
 muns <- muns %>% 
   mutate(regional_id = as.character(regional_id))
 
-file_list <- list.files(path = "data/casos_dengue/", pattern = ".parquet", full.names = TRUE)
+file_list <- list.files(path = "../data/casos_dengue/", pattern = ".parquet", full.names = TRUE)
 df_dengue <- lapply(file_list, read_parquet)
 df_dengue <- bind_rows(df_dengue) %>% 
   left_join(muns, by = "municipio_geocodigo") %>% 
@@ -56,7 +56,7 @@ df_dengue <- bind_rows(df_dengue) %>%
     incest = casos_est/pop * 100000
   )
 
-file_list <- list.files(path = "data/casos_chik/", pattern = ".parquet", full.names = TRUE)
+file_list <- list.files(path = "../data/casos_chik/", pattern = ".parquet", full.names = TRUE)
 df_chik <- lapply(file_list, read_parquet)
 df_chik <- bind_rows(df_chik) %>% 
   left_join(muns, by = "municipio_geocodigo")%>% 
@@ -64,7 +64,7 @@ df_chik <- bind_rows(df_chik) %>%
     incest = casos_est/pop * 100000
   )
 
-shape <- st_read("shape/rs_450_RepCor1.shp") %>% 
+shape <- st_read("../shape/rs_450_RepCor1.shp") %>% 
   rename(regional_id = primary.id) %>% 
   mutate(regional_id = as.character((regional_id))) %>% 
   dplyr::select(-c(id, secondary)) %>% 
@@ -77,7 +77,7 @@ shape <- st_read("shape/rs_450_RepCor1.shp") %>%
 
 ```{r, include = FALSE}
 # MEM
-load("data/mem2024.RData")
+load("../data/mem2024.RData")
 
 # Dengue
 memUFanual <- memUFanual %>% 
@@ -159,7 +159,7 @@ shape_dengue <- shape %>%
 gg_pop_risco_dengue <- tab_pop_risco_dengue %>% 
   gg_bar_pop_risco(por_regiao = T)
 
-gg_map_risco_classif_dengue <- gg_map_risco_classif(shape = shape_dengue, se_max = se_max_dengue)
+gg_map_risco_classif_dengue <- gg_map_risco_classif(shape = shape_dengue)
 ```
 
 
@@ -193,7 +193,7 @@ shape_chik <- shape %>%
 gg_pop_risco_chik <- tab_pop_risco_chik %>% 
   gg_bar_pop_risco(por_regiao = T)
 
-gg_map_risco_classif_chik <- gg_map_risco_classif(shape = shape_chik, se_max = se_max_chik)
+gg_map_risco_classif_chik <- gg_map_risco_classif(shape = shape_chik)
 ```
 
 ```{r, include = FALSE}
@@ -283,6 +283,32 @@ dif_prop_ano_chik = round(total_casos_ano_selecionado_chik/total_casos_ano_anter
 ```
 
 
+```{r, include = FALSE}
+ultima_semana_dengue <- substr(se_max_dengue, 5, 6)
+ultima_semana_chik <- substr(se_max_chik, 5, 6)
+
+# Total
+total_casos_ano_selecionado <- total_casos_ano_selecionado_dengue + total_casos_ano_selecionado_chik
+
+prop_casos_provaveis_total <- paste0(round(((total_casos_provaveis_ano_selecionado_dengue + total_casos_provaveis_ano_selecionado_chik)/(total_casos_ano_selecionado_dengue + total_casos_ano_selecionado_chik)) *100, 2),"%")
+
+dif_prop_ano_total <- round((total_casos_ano_selecionado_dengue + total_casos_ano_selecionado_chik)/(total_casos_ano_anterior_dengue + total_casos_ano_anterior_chik), 2)
+
+tabela_1 <- data.frame(
+  agravo = c("Chikungunya", "Dengue", "Total"),
+  casos_suspeitos = c(total_casos_ano_selecionado_chik, total_casos_ano_selecionado_dengue, total_casos_ano_selecionado),
+  percentual_casos_suspeitos = c(prop_casos_provaveis_dengue, prop_casos_provaveis_chik, prop_casos_provaveis_total),
+  var_relacao_ano_anterior = c(dif_prop_ano_chik, dif_prop_ano_dengue, dif_prop_ano_total)
+) %>% 
+  knitr::kable(caption = "",
+               row.names = F,
+               col.names = c("Agravo", "Casos suspeitos", "Percentual de casos prováveis ", "Variação em relação ao ano passado"),
+               align = c("cccccc"),
+               format = "latex", digits = 2) %>%
+  kableExtra::kable_classic(full_width = F, html_font = "arial") %>% 
+  row_spec(0, bold = T)
+```
+
 \newgeometry{top=20mm, left=10mm, bottom=20mm} 
 \pagecolor{UoDDarkBlue}\afterpage{\nopagecolor}
 
@@ -324,7 +350,7 @@ dif_prop_ano_chik = round(total_casos_ano_selecionado_chik/total_casos_ano_anter
 
 
 \textit{Análises com base nos dados inseridos no SINAN ONLINE até o dia XX/XX/XXXX.\\
-Semana epidemiológica xy: INÍCIO – FIM}
+Semana epidemiológica `r ultima_semana_dengue`: INÍCIO – FIM}
 
 \vspace{2cm}
 \textbf{AVISOS:}
@@ -370,22 +396,21 @@ A tabela mostra a mesma informação para chikungunya e zika.
 
 \textbf{Tabela 1.} Casos notificados de arboviroses até a semana `r se_max_dengue`
 
-<!-- Adicionar tabela 1 -->
-
+`r tabela_1`
 
 \textbf{Casos Acumulados por Estados}
 
-Na figura abaixo estão representadas as incidências de casos notificados acumulados por 100 mil habitantes até a semana XX, em comparação com as incidências históricas dos últimos 5 anos .
+Na figura abaixo estão representadas as incidências de casos notificados acumulados por 100 mil habitantes até a semana `r ultima_semana_dengue`, em comparação com as incidências históricas dos últimos 5 anos .
 
 <!-- Adicionar figura 1 -->
 
-Figura 1. Incidência acumulada por 100 mil habitantes sobre os casos notificados até a semana xx
+Figura 1. Incidência acumulada por 100 mil habitantes sobre os casos notificados até a semana `r ultima_semana_dengue`
 
 As curvas de casos semanais de dengue e chikungunya são apresentadas na figura abaixo, com o nowcast (a figura parece com essa.). Observa-se que está (dentro/fora) do previsto.
 
 <!-- Adicionar figura 2 -->
 
-Figura 2. Curvas de previsão de casos semanais no Brasil  para Dengue e Chikungunya  
+Figura 2. Curvas de previsão de casos semanais no Brasil para Dengue e Chikungunya  
 
 As curvas de casos abaixo apresentam as incidências de casos suspeitos notificados,por estado, e os casos estimados de acordo com o nowcast:  
 
@@ -410,7 +435,14 @@ A figura abaixo mostra xx …
 \textbf{Estados / Regionais com aumento de Casos }
 \vspace{2cm}
 
-Do total de 450 regionais, x estão indicando alta incidência de suspeição de dengue (Figura 4). No Amazonas, na região do Alto Juruá e Triângulo esse indicador aponta aumento. No nordeste, observa-se a 9a região de saúde no Alagoas, 9a na Paraíba, Baturité no CE. No sudeste, Mananciais em SP. 
+```{r, include = FALSE}
+n_regionais_alta_incidencia_dengue <- shape_dengue %>% filter(status == "Alta incidência") %>% pull() %>% length() 
+
+n_regionais_alta_incidencia_chik <- shape_chik %>% filter(status == "Alta incidência") %>% pull() %>% length() 
+```
+
+
+Do total de 450 regionais, `r n_regionais_alta_incidencia_dengue` estão indicando alta incidência de suspeição de dengue e `r n_regionais_alta_incidencia_chik` de chikungunya (Figura 4). No Amazonas, na região do Alto Juruá e Triângulo esse indicador aponta aumento. No nordeste, observa-se a 9a região de saúde no Alagoas, 9a na Paraíba, Baturité no CE. No sudeste, Mananciais em SP. 
 
 
 Figura 4. Regionais de saúde que estão com notificação alta e com sinais de queda (amarelo) ou estabilidade (marrom). 
@@ -437,7 +469,3 @@ $^{c}$Federal University of Minas Gerais, Brazil
 
 $^{d}$School of Applied Math, Getulio Vargas Foundation, Brazil
 
-
-
-
-<!-- \input{sections/resumo_executivo} -->
