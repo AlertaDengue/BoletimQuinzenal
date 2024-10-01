@@ -123,7 +123,8 @@ df_dengue_nacional <- df_dengue %>% obter_metricas_nacionais() #Nacional
 df_dengue_uf <- df_dengue %>% obter_metricas_estaduais() # Estadual
 df_dengue_total <- df_dengue %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
 df_dengue_macro <- df_dengue %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
-df_dengue_reg <- df_dengue %>% obter_metricas_regionais_por_semana() # Regional
+df_dengue_reg <- df_dengue %>% obter_metricas_regionais_por_semana() %>% 
+  obter_siglas_codigos(merge_by = "codigo") # Regional
 se_max_dengue  <- max(df_dengue$SE) # Semana epidemiologia mais recente
 tabela_dengue <- obter_tabela(df = df_dengue, df_mem = memUFanual, se_max_dengue) # Tabela Estadual
 
@@ -132,8 +133,9 @@ df_dengue_reg_se <- df_dengue_reg %>%
   select(regional_id, UF, pop, incest)
 
 tabela_reg_dengue <- obter_metricas_por_regional(
-  df_mem_anual = memMacroanual, df_regional_por = df_dengue_reg
+  df_mem_regional_anual = memReganual.chi, df_regional_por = df_dengue_reg
 )
+
 tab_pop_risco_dengue <- tabela_reg_dengue %>% obter_pop_sob_risco()
 tabela_reg_dengue <- obter_classificacao_das_regionais(df_dengue_reg, tabela_reg_dengue)
 shape_dengue <- shape %>%
