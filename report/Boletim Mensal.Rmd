@@ -31,11 +31,115 @@ Sys.setlocale("LC_TIME", "pt_BR.UTF-8")
 ```{r}
 r_pkgs <- c("tidyverse", "AlertTools", "sf",
             "ggplot2", "janitor", "kableExtra", 
-            "sjstats", "sjPlot", "gt")
+            "sjstats", "sjPlot", "gt", "arrow")
 
 if(!"pacman" %in% rownames(installed.packages())) install.packages("pacman")
 pacman::p_load(char = r_pkgs)
 source("scripts/funcoes_extras.R")
+```
+
+```{r}
+# Parametros
+ano <- 2024
+```
+
+```{r}
+load(file = "data/muns.R") 
+
+file_list <- list.files(path = "data/casos_dengue/", pattern = ".parquet", full.names = TRUE)
+df_dengue <- lapply(file_list, read_parquet)
+df_dengue <- bind_rows(df_dengue) %>% 
+  left_join(muns, by = "municipio_geocodigo")
+
+file_list <- list.files(path = "data/casos_chik/", pattern = ".parquet", full.names = TRUE)
+df_chik <- lapply(file_list, read_parquet)
+df_chik <- bind_rows(df_chik) %>% 
+  left_join(muns, by = "municipio_geocodigo")
+
+shape <- st_read("shape/rs_450_RepCor1.shp") %>% 
+  mutate(
+    primary.id = as.numeric(primary.id)
+  )
+```
+
+
+```{r}
+# MEM
+load("data/mem2024.RData")
+memUFanual <- memUFanual %>% 
+  rename(codigo = nome) %>% 
+  mutate(codigo = as.character(codigo)) %>% 
+  obter_siglas_codigos(merge_by = "codigo")
+
+memMacroanual <- memMacroanual %>% 
+  rename(
+    macroregional_id = nome,
+    codigo = uf) %>% 
+  mutate(
+    macroregional_id = as.character(macroregional_id),
+    codigo = as.character(codigo)
+  ) %>% 
+  obter_siglas_codigos(merge_by = "codigo")
+
+
+```
+
+
+```{r}
+# Dengue
+df_dengue_nacional <- df_dengue %>% obter_metricas_nacionais() #Nacional
+df_dengue_uf <- df_dengue %>% obter_metricas_estaduais() # Estadual
+df_dengue_total <- df_dengue %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
+df_dengue_macro <- df_dengue %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
+df_dengue_reg <- df_dengue %>% obter_metricas_regionais_por_semana() # Regional
+se_max_dengue  <- max(df_dengue$SE) # Semana epidemiologia mais recente
+tabela_dengue <- obter_tabela(df = df_dengue, df_mem = memUFanual, se_max_dengue) # Tabela Estadual
+
+df_dengue_reg_se <- df_dengue_reg %>% 
+  filter(SE == se_max_dengue) %>%
+  select(regional_id, UF, pop, incest)
+
+tabela_reg_dengue <- obter_metricas_por_regional(
+  df_mem_anual = memMacroanual, df_regional_por_se = df_dengue_reg_se
+)
+tab_pop_risco_dengue <- tabela_reg_dengue %>% obter_pop_sob_risco()
+tabela_reg_dengue <- obter_classificacao_das_regionais(df_dengue_reg, tabela_reg_dengue)
+shape_dengue <- shape %>%
+  left_join(tabela_reg_dengue, join_by("primary.id" == "regional_id"))
+
+gg_pop_risco_dengue <- tab_pop_risco_dengue %>% 
+  gg_bar_pop_risco()
+
+gg_map_risco_classif_dengue <- gg_map_risco_classif(shape = shape_dengue, se_max = se_max_dengue)
+```
+
+
+```{r}
+# Chikungunya
+df_chik_nacional <- df_chik %>%  obter_metricas_nacionais() #Nacional
+df_chik_uf <- df_chik %>% obter_metricas_estaduais() # Estadual
+df_chik_total <- df_chik %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
+df_chikv_macro <- df_chik %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
+df_chik_reg <- df_chik %>% obter_metricas_regionais_por_semana() # Regional
+se_max_chik  <- max(df_chik_uf$SE) # Semana epidemiologia mais recente
+tabela_chik <- obter_tabela(df = df_chik, df_mem = memUFanual, se_max_chik) # Tabela Estadual
+
+df_chik_reg_se <- df_chik_reg %>% 
+  filter(SE == se_max_chik) %>%
+  select(regional_id, UF, pop, incest)
+
+tabela_reg_chik <- obter_metricas_por_regional(
+  df_mem_anual = memReganual, df_regional_por_se = df_chik_reg_se
+)
+tab_pop_risco_chik <- tabela_reg_chik %>% obter_pop_sob_risco()
+tabela_reg_chik <- obter_classificacao_das_regionais(df_chik_reg, tabela_reg_chik)
+shape_chik <- shape %>%
+  left_join(tabela_reg_chik, join_by("primary.id" == "regional_id"))
+
+gg_pop_risco_chik <- tab_pop_risco_chik %>% 
+  gg_bar_pop_risco()
+
+gg_map_risco_classif_chik <- gg_map_risco_classif(shape = shape_chik, se_max = se_max_chik)
 ```
 
 

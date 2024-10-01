@@ -1,3 +1,27 @@
+obter_siglas_codigos <- function(df, merge_by = "codigo"){
+  
+  df_uf <- data.frame(
+      estado = c("Rondônia", "Roraima", "Amazonas", "Pará", "Amapá", "Tocantins", "Alagoas",
+                 "Bahia", "Ceará", "Maranhão", "Paraíba", "Pernambuco", "Piauí",
+                 "Rio Grande do Norte", "Sergipe", "Mato Grosso", "Mato Grosso do Sul",
+                 "Distrito Federal", "Goiás", "São Paulo", "Rio Grande do Sul",
+                 "Rio de Janeiro", "Minas Gerais", "Espírito Santo", "Paraná",
+                 "Santa Catarina", "Acre"),
+      sigla = c("RO", "RR", "AM", "PA", "AP", "TO", "AL",
+                "BA", "CE", "MA", "PB", "PE", "PI",
+                "RN", "SE", "MT", "MS", "DF", "GO", "SP", "RS",
+                "RJ", "MG", "ES", "PR", "SC", "AC"),
+      codigo = c("11", "14", "13", "15", "16", "17", "27",
+                 "29", "23", "21", "25", "26", "22",
+                 "24", "28", "51", "50", "53", "52", "35", "43",
+                 "33", "31", "32", "41", "42", "12")
+    )
+  
+  df <- df %>% 
+    left_join(df_uf, by = merge_by)
+    return(df)
+}
+
 obter_metricas_nacionais <- function(df){
   result <- df %>%
     group_by(SE) %>%
@@ -71,14 +95,19 @@ obter_metricas_regionais_por_semana <- function(df){
 
 obter_tabela <- function(df, df_mem, se_max){
   
-  df_total = df %>% obter_metricas_estaduais_por_ano()
+  # df = df_dengue
+  # df_mem = memUFanual 
+  # se_max = se_max_dengue
   
-  tabela_UF <- df_mem %>%
-    left_join(UFs, join_by("nome" == "estado")) %>%
-    select(sigla, codigo, nome, veryhigh) %>% 
-    mutate(codigo = as.numeric(sigla)) %>%
-    select(estado = nome, codigo, limiar = veryhigh) %>%
-    left_join(df_total, by = join_by(codigo == UF))
+    df_total = df %>% obter_metricas_estaduais_por_ano()
+  # colnames(UFs) <- c("estado", "codigo", "sigla" )
+  
+  tabela_UF <- df_mem %>% 
+    select(sigla, codigo, estado, veryhigh) %>% 
+    left_join(df_total %>% 
+                rename(codigo = UF)%>% 
+                mutate(codigo = as.character(codigo)),
+              by = "codigo")
   
   df_estaduais <- df %>% 
     obter_metricas_estaduais()
@@ -88,10 +117,11 @@ obter_tabela <- function(df, df_mem, se_max){
     select(UF, incest, inc)
   
   tabela_UF <- tabela_UF %>%
-    left_join(df_se, join_by("codigo" == "UF")) %>% 
-    mutate(
-      nivelNowcast = as.numeric(incest > 1.2 * limiar)  
-    )
+    left_join(df_se %>% 
+                rename(codigo = UF) %>% 
+                mutate(codigo = as.character(codigo)),
+              by = "codigo") %>% 
+    mutate(nivelNowcast = as.numeric(incest > 1.2 * veryhigh))
   # sum(tabela_UF$nivel)  # numero de UFs acima do limiar epidemico
   
   ## Calcula Rt por UF
@@ -111,7 +141,7 @@ obter_tabela <- function(df, df_mem, se_max){
     df2 <- obj_df[obj_df$UF == tabela_UF$codigo[i], ] %>%
       arrange(SE)
     df2 <- df2[df2$SE > 202400, ]
-    semanas <- df2$SE[df2$incest > tabela_UF$limiar[i]]
+    semanas <- df2$SE[df2$incest > tabela_UF$veryhigh[i]]
     tabela_UF$selimiaralto[i] <- ifelse(length(semanas) == 0, NA, min(semanas))
     r <- Rt(obj_df[obj_df$UF == tabela_UF$codigo[i],], count = "casos_est", 
             gtdist = "normal", meangt = 3, sdgt = 1)
@@ -138,14 +168,15 @@ obter_pop_sob_risco <- function(df){
   return(df_result)
 }
 
-obter_metricas_por_regional <- function(df_mem_anual, df_regional_por_se){
-  
-  df_result <- df_mem_anual %>% 
-    select(uf, regional, regional_id = nome, veryhigh) %>%
-    left_join(df_regional_por_se, by = "regional_id") %>% 
+obter_metricas_por_regional <- function(df_mem_macroregional_anual, df_regional_por_se){
+  # df_regionais = muns
+  df_result <- df_mem_macroregional_anual %>% 
+    select(sigla, macroregional, macroregional_id, veryhigh) %>%
+    left_join(df_regional_por_se %>% 
+                dplyr::select(UF, pop), by = "regional_id") %>% 
     mutate(
       nivel = as.numeric(incest > (1.2 * veryhigh)),
-      poprisco = nivel * pop,
+      poprisco = nivel * populacao,
       Rtmean = NA,
       secomp1 = NA 
     )
