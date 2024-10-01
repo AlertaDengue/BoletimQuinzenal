@@ -66,22 +66,54 @@ shape <- st_read("shape/rs_450_RepCor1.shp") %>%
 ```{r}
 # MEM
 load("data/mem2024.RData")
+
+# Dengue
 memUFanual <- memUFanual %>% 
   rename(codigo = nome) %>% 
   mutate(codigo = as.character(codigo)) %>% 
   obter_siglas_codigos(merge_by = "codigo")
 
-memMacroanual <- memMacroanual %>% 
+memReganual <- memReganual %>% 
   rename(
-    macroregional_id = nome,
+    regional_id = nome,
     codigo = uf) %>% 
   mutate(
-    macroregional_id = as.character(macroregional_id),
+    regional_id = as.character(regional_id),
     codigo = as.character(codigo)
   ) %>% 
   obter_siglas_codigos(merge_by = "codigo")
 
+memUFsazonal <- memUFsazonal %>% 
+  rename(
+    codigo = uf) %>% 
+  mutate(
+    codigo = as.character(codigo)
+  ) %>% 
+  obter_siglas_codigos(merge_by = "codigo")
 
+## Chikv
+memUFanual.chi <- memUFanual.chi %>% 
+  rename(codigo = nome) %>% 
+  mutate(codigo = as.character(codigo)) %>% 
+  obter_siglas_codigos(merge_by = "codigo")
+
+memReganual.chi <- memReganual.chi %>% 
+  rename(
+    regional_id = nome,
+    codigo = uf) %>% 
+  mutate(
+    regional_id = as.character(regional_id),
+    codigo = as.character(codigo)
+  ) %>% 
+  obter_siglas_codigos(merge_by = "codigo")
+
+memUFsazonal.chi <- memUFsazonal.chi %>% 
+  rename(
+    codigo = uf) %>% 
+  mutate(
+    codigo = as.character(codigo)
+  ) %>% 
+  obter_siglas_codigos(merge_by = "codigo")
 ```
 
 
@@ -100,7 +132,7 @@ df_dengue_reg_se <- df_dengue_reg %>%
   select(regional_id, UF, pop, incest)
 
 tabela_reg_dengue <- obter_metricas_por_regional(
-  df_mem_anual = memMacroanual, df_regional_por_se = df_dengue_reg_se
+  df_mem_anual = memMacroanual, df_regional_por = df_dengue_reg
 )
 tab_pop_risco_dengue <- tabela_reg_dengue %>% obter_pop_sob_risco()
 tabela_reg_dengue <- obter_classificacao_das_regionais(df_dengue_reg, tabela_reg_dengue)
