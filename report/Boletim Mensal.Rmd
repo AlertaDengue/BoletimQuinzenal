@@ -45,21 +45,33 @@ ano <- 2024
 
 ```{r}
 load(file = "data/muns.R") 
+muns <- muns %>% 
+  mutate(regional_id = as.character(regional_id))
 
 file_list <- list.files(path = "data/casos_dengue/", pattern = ".parquet", full.names = TRUE)
 df_dengue <- lapply(file_list, read_parquet)
 df_dengue <- bind_rows(df_dengue) %>% 
-  left_join(muns, by = "municipio_geocodigo")
+  left_join(muns, by = "municipio_geocodigo") %>% 
+  mutate(
+    incest = casos_est/pop * 100000
+  )
 
 file_list <- list.files(path = "data/casos_chik/", pattern = ".parquet", full.names = TRUE)
 df_chik <- lapply(file_list, read_parquet)
 df_chik <- bind_rows(df_chik) %>% 
-  left_join(muns, by = "municipio_geocodigo")
+  left_join(muns, by = "municipio_geocodigo")%>% 
+  mutate(
+    incest = casos_est/pop * 100000
+  )
 
 shape <- st_read("shape/rs_450_RepCor1.shp") %>% 
-  mutate(
-    primary.id = as.numeric(primary.id)
-  )
+  rename(regional_id = primary.id) %>% 
+  mutate(regional_id = as.character((regional_id))) %>% 
+  dplyr::select(-c(id, secondary)) %>% 
+  left_join(muns %>% 
+           dplyr::select(regional_id, regional) %>% 
+             distinct(regional_id, .keep_all = T),
+         by = "regional_id")
 ```
 
 
@@ -122,27 +134,30 @@ memUFsazonal.chi <- memUFsazonal.chi %>%
 df_dengue_nacional <- df_dengue %>% obter_metricas_nacionais() #Nacional
 df_dengue_uf <- df_dengue %>% obter_metricas_estaduais() # Estadual
 df_dengue_total <- df_dengue %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
-df_dengue_macro <- df_dengue %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
+df_dengue_macro_se <- df_dengue %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
 df_dengue_reg <- df_dengue %>% obter_metricas_regionais_por_semana() %>% 
   obter_siglas_codigos(merge_by = "codigo") # Regional
 se_max_dengue  <- max(df_dengue$SE) # Semana epidemiologia mais recente
 tabela_dengue <- obter_tabela(df = df_dengue, df_mem = memUFanual, se_max_dengue) # Tabela Estadual
 
-df_dengue_reg_se <- df_dengue_reg %>% 
+df_dengue_regional_se <- df_dengue_reg %>% 
   filter(SE == se_max_dengue) %>%
-  select(regional_id, UF, pop, incest)
+  select(regional_id, codigo, pop, incest) %>% 
+  mutate(regional_id = as.character(regional_id))
 
 tabela_reg_dengue <- obter_metricas_por_regional(
-  df_mem_regional_anual = memReganual.chi, df_regional_por = df_dengue_reg
+  df_mem_regional_anual = memReganual.chi,
+  df_regional_se = df_dengue_regional_se
 )
 
-tab_pop_risco_dengue <- tabela_reg_dengue %>% obter_pop_sob_risco()
 tabela_reg_dengue <- obter_classificacao_das_regionais(df_dengue_reg, tabela_reg_dengue)
+tab_pop_risco_dengue <- tabela_reg_dengue %>% obter_pop_sob_risco()
+
 shape_dengue <- shape %>%
-  left_join(tabela_reg_dengue, join_by("primary.id" == "regional_id"))
+  left_join(tabela_reg_dengue, by = "regional_id")
 
 gg_pop_risco_dengue <- tab_pop_risco_dengue %>% 
-  gg_bar_pop_risco()
+  gg_bar_pop_risco(por_regiao = T)
 
 gg_map_risco_classif_dengue <- gg_map_risco_classif(shape = shape_dengue, se_max = se_max_dengue)
 ```
