@@ -28,7 +28,7 @@ options(scipen = 999999)
 Sys.setlocale("LC_TIME", "pt_BR.UTF-8")
 ```
 
-```{r}
+```{r, include = FALSE}
 r_pkgs <- c("tidyverse", "AlertTools", "sf",
             "ggplot2", "janitor", "kableExtra", 
             "sjstats", "sjPlot", "gt", "arrow")
@@ -38,12 +38,12 @@ pacman::p_load(char = r_pkgs)
 source("scripts/funcoes_extras.R")
 ```
 
-```{r}
+```{r, include = FALSE}
 # Parametros
 ano <- 2024
 ```
 
-```{r}
+```{r, include = FALSE}
 load(file = "data/muns.R") 
 muns <- muns %>% 
   mutate(regional_id = as.character(regional_id))
@@ -69,13 +69,13 @@ shape <- st_read("shape/rs_450_RepCor1.shp") %>%
   mutate(regional_id = as.character((regional_id))) %>% 
   dplyr::select(-c(id, secondary)) %>% 
   left_join(muns %>% 
-           dplyr::select(regional_id, regional) %>% 
-             distinct(regional_id, .keep_all = T),
-         by = "regional_id")
+              dplyr::select(regional_id, regional) %>% 
+              distinct(regional_id, .keep_all = T),
+            by = "regional_id")
 ```
 
 
-```{r}
+```{r, include = FALSE}
 # MEM
 load("data/mem2024.RData")
 
@@ -85,15 +85,15 @@ memUFanual <- memUFanual %>%
   mutate(codigo = as.character(codigo)) %>% 
   obter_siglas_codigos(merge_by = "codigo")
 
-memReganual <- memReganual %>% 
-  rename(
-    regional_id = nome,
-    codigo = uf) %>% 
-  mutate(
-    regional_id = as.character(regional_id),
-    codigo = as.character(codigo)
-  ) %>% 
-  obter_siglas_codigos(merge_by = "codigo")
+# memReganual <- memReganual %>% 
+#   rename(
+#     regional_id = nome,
+#     codigo = uf) %>% 
+#   mutate(
+#     regional_id = as.character(regional_id),
+#     codigo = as.character(codigo)
+#   ) %>% 
+#   obter_siglas_codigos(merge_by = "codigo")
 
 memUFsazonal <- memUFsazonal %>% 
   rename(
@@ -129,7 +129,7 @@ memUFsazonal.chi <- memUFsazonal.chi %>%
 ```
 
 
-```{r}
+```{r, include = FALSE}
 # Dengue
 df_dengue_nacional <- df_dengue %>% obter_metricas_nacionais() #Nacional
 df_dengue_uf <- df_dengue %>% obter_metricas_estaduais() # Estadual
@@ -163,32 +163,123 @@ gg_map_risco_classif_dengue <- gg_map_risco_classif(shape = shape_dengue, se_max
 ```
 
 
-```{r}
+```{r, include = FALSE}
 # Chikungunya
-df_chik_nacional <- df_chik %>%  obter_metricas_nacionais() #Nacional
+df_chik_nacional <- df_chik %>% obter_metricas_nacionais() #Nacional
 df_chik_uf <- df_chik %>% obter_metricas_estaduais() # Estadual
 df_chik_total <- df_chik %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
-df_chikv_macro <- df_chik %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
-df_chik_reg <- df_chik %>% obter_metricas_regionais_por_semana() # Regional
-se_max_chik  <- max(df_chik_uf$SE) # Semana epidemiologia mais recente
+df_chik_macro_se <- df_chik %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
+df_chik_reg <- df_chik %>% obter_metricas_regionais_por_semana() %>% 
+  obter_siglas_codigos(merge_by = "codigo") # Regional
+se_max_chik  <- max(df_chik$SE) # Semana epidemiologia mais recente
 tabela_chik <- obter_tabela(df = df_chik, df_mem = memUFanual, se_max_chik) # Tabela Estadual
 
-df_chik_reg_se <- df_chik_reg %>% 
+df_chik_regional_se <- df_chik_reg %>% 
   filter(SE == se_max_chik) %>%
-  select(regional_id, UF, pop, incest)
+  select(regional_id, codigo, pop, incest) %>% 
+  mutate(regional_id = as.character(regional_id))
 
 tabela_reg_chik <- obter_metricas_por_regional(
-  df_mem_anual = memReganual, df_regional_por_se = df_chik_reg_se
+  df_mem_regional_anual = memReganual.chi,
+  df_regional_se = df_chik_regional_se
 )
-tab_pop_risco_chik <- tabela_reg_chik %>% obter_pop_sob_risco()
+
 tabela_reg_chik <- obter_classificacao_das_regionais(df_chik_reg, tabela_reg_chik)
+tab_pop_risco_chik <- tabela_reg_chik %>% obter_pop_sob_risco()
+
 shape_chik <- shape %>%
-  left_join(tabela_reg_chik, join_by("primary.id" == "regional_id"))
+  left_join(tabela_reg_chik, by = "regional_id")
 
 gg_pop_risco_chik <- tab_pop_risco_chik %>% 
-  gg_bar_pop_risco()
+  gg_bar_pop_risco(por_regiao = T)
 
 gg_map_risco_classif_chik <- gg_map_risco_classif(shape = shape_chik, se_max = se_max_chik)
+```
+
+```{r, include = FALSE}
+# Informacoes textuais - dengue
+
+# Ano selecionado
+df_ano_selecionado_dengue <- df_dengue %>% 
+  filter(as.numeric(substr(SE, 1, 4))  == ano) 
+
+pop_brasil_ano_selecionado_dengue <- sum(df_ano_selecionado_dengue %>% 
+                                    arrange(desc(SE)) %>% 
+                                    dplyr::select(municipio_geocodigo, pop) %>% 
+                                    distinct(municipio_geocodigo, .keep_all = T) %>% 
+                                    pull(pop), na.rm = T)
+
+total_casos_ano_selecionado_dengue <- sum(df_ano_selecionado_dengue %>% 
+                                     pull(casos), na.rm = T)
+
+total_casos_provaveis_ano_selecionado_dengue <- sum(df_ano_selecionado_dengue %>% 
+                                     pull(casprov), na.rm = T)
+
+prop_casos_provaveis_dengue <- paste0(round(total_casos_provaveis_ano_selecionado_dengue/total_casos_ano_selecionado_dengue *100, 2),"%")
+
+incidencia_acumulada_ano_selecionado_dengue <- total_casos_ano_selecionado_dengue/ pop_brasil_ano_selecionado_dengue * 10^5
+
+# Ano anterior
+df_ano_anterior_dengue <- df_dengue %>% 
+  filter(as.numeric(substr(SE, 1, 4)) == (ano - 1))
+
+pop_brasil_ano_anterior_dengue <- sum(df_ano_anterior_dengue %>% 
+                                 arrange(desc(SE)) %>% 
+                                 dplyr::select(municipio_geocodigo, pop) %>% 
+                                 distinct(municipio_geocodigo, .keep_all = T) %>% 
+                                 pull(pop), na.rm = T)
+
+df_ano_anterior_dengue <- df_ano_anterior_dengue %>% 
+  filter(SE <= (se_max_dengue - 100))
+
+total_casos_ano_anterior_dengue <- sum(df_ano_anterior_dengue %>% 
+                                  pull(casos), na.rm = T)
+incidencia_acumulada_ano_anterior_dengue <- total_casos_ano_anterior_dengue/ pop_brasil_ano_anterior_dengue * 10^5
+
+dif_prop_ano_dengue = round(total_casos_ano_selecionado_dengue/total_casos_ano_anterior_dengue, 2)
+```
+
+```{r, include = FALSE}
+# Informacoes textuais - chikungunya
+
+# Ano selecionado
+df_ano_selecionado_chik <- df_chik %>% 
+  filter(as.numeric(substr(SE, 1, 4))  == ano) 
+
+pop_brasil_ano_selecionado_chik <- sum(df_ano_selecionado_chik %>% 
+                                           arrange(desc(SE)) %>% 
+                                           dplyr::select(municipio_geocodigo, pop) %>% 
+                                           distinct(municipio_geocodigo, .keep_all = T) %>% 
+                                           pull(pop), na.rm = T)
+
+total_casos_ano_selecionado_chik <- sum(df_ano_selecionado_chik %>% 
+                                            pull(casos), na.rm = T)
+
+total_casos_provaveis_ano_selecionado_chik <- sum(df_ano_selecionado_chik %>% 
+                                                      pull(casprov), na.rm = T)
+
+prop_casos_provaveis_chik <- paste0(round(total_casos_provaveis_ano_selecionado_chik/total_casos_ano_selecionado_chik *100, 2),"%")
+
+incidencia_acumulada_ano_selecionado_chik <- total_casos_ano_selecionado_chik/ pop_brasil_ano_selecionado_chik * 10^5
+
+# Ano anterior
+df_ano_anterior_chik <- df_chik %>% 
+  filter(as.numeric(substr(SE, 1, 4)) == (ano - 1))
+
+pop_brasil_ano_anterior_chik <- sum(df_ano_anterior_chik %>% 
+                                        arrange(desc(SE)) %>% 
+                                        dplyr::select(municipio_geocodigo, pop) %>% 
+                                        distinct(municipio_geocodigo, .keep_all = T) %>% 
+                                        pull(pop), na.rm = T)
+
+df_ano_anterior_chik <- df_ano_anterior_chik %>% 
+  filter(SE <= (se_max_chik - 100))
+
+total_casos_ano_anterior_chik <- sum(df_ano_anterior_chik %>% 
+                                         pull(casos), na.rm = T)
+incidencia_acumulada_ano_anterior_chik <- total_casos_ano_anterior_chik/ pop_brasil_ano_anterior_chik * 10^5
+
+dif_prop_ano_chik = round(total_casos_ano_selecionado_chik/total_casos_ano_anterior_chik, 2)
 ```
 
 
@@ -209,8 +300,6 @@ gg_map_risco_classif_chik <- gg_map_risco_classif(shape = shape_chik, se_max = s
 \normalsize
 \textcolor{white}{`r format(Sys.Date(), format="%d %B %Y")`}
 \vspace{120mm}
-
-
 
 <!-- \textcolor{white}{Second Author} -->
 
@@ -275,11 +364,11 @@ Como citar:
 \vspace{2cm}
 
 Esse boletim analisa as condições de transmissão da chikungunya e dengue no Brasil utilizando dados de clima e notificação de casos fornecidos pela Secretaria de Vigilância em Saúde (SVS). A partir desses dados são analisadas as condições de receptividade climática, transmissão e incidência (ver definição), tendo como objetivo contribuir para a tomada de decisão na sala de situação.
-Esse ano foram notificados até o momento, $XXX$ casos suspeitos de dengue, o que corresponde a uma incidência acumulada de $XXX$ casos por 100.000 habitantes. Esse valor corresponde a $xxx\%$ do registrado no ano passado, no mesmo período. Desse total, $x\%$ são classificados como prováveis. 
+Esse ano foram notificados até o momento, `r total_casos` casos suspeitos de dengue, o que corresponde a uma incidência acumulada de `r incidencia_acumulada` casos por 100.000 habitantes. Esse valor corresponde a `r dif_prop_ano` vezes o registrado no ano passado, no mesmo período. Desse total, `r prop_casos_provaveis` são classificados como prováveis. 
 A tabela mostra a mesma informação para chikungunya e zika.
 
 
-\textbf{Tabela 1.} Casos notificados de arboviroses até a semana XX
+\textbf{Tabela 1.} Casos notificados de arboviroses até a semana `r se_max_dengue`
 
 <!-- Adicionar tabela 1 -->
 
