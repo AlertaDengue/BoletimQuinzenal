@@ -1,6 +1,6 @@
 obter_siglas_codigos <- function(df, merge_by = "codigo"){
   
-  df_uf <- data.frame(
+  df_uf = data.frame(
     estado = c("Rondônia", "Roraima", "Amazonas", "Pará", "Amapá", "Tocantins", "Alagoas",
                "Bahia", "Ceará", "Maranhão", "Paraíba", "Pernambuco", "Piauí",
                "Rio Grande do Norte", "Sergipe", "Mato Grosso", "Mato Grosso do Sul",
@@ -15,11 +15,14 @@ obter_siglas_codigos <- function(df, merge_by = "codigo"){
                "29", "23", "21", "25", "26", "22",
                "24", "28", "51", "50", "53", "52", "35", "43",
                "33", "31", "32", "41", "42", "12"),
-    stringsAsFactors = FALSE # Desativando a conversão automática para fatores
+    stringsAsFactors = FALSE 
   )
   
   df <- df %>% 
     left_join(df_uf, by = merge_by)
+  
+  df$estado <- stringi::stri_unescape_unicode(df$estado)
+  
   return(df)
 }
 
@@ -243,9 +246,10 @@ obter_classificacao_das_regionais <- function(df_regional, tab_regional, se_min 
       Rtmean >= 0.9 & Rtmean < 1.2 & nivel == 1 ~ "Alto estável",
       Rtmean < 0.9 & nivel == 1 ~ "Alto em queda",
       nivel == 0 ~ "Baixo ou moderado",
-      TRUE ~ NA_character_  # para lidar com casos não cobertos
+      TRUE ~ "Não se aplica"
     ),
-    status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado"))
+    status = ifelse(is.na(status), "Não se aplica", status),
+    status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado", "Não se aplica"))
     )
   
   return(tab_regional)
@@ -280,11 +284,13 @@ gg_bar_pop_risco <- function(df, por_regiao = T){
 }
 
 gg_map_risco_classif <- function(shape){
-
+  
   g_map <- shape %>% 
     ggplot() +
-    geom_sf(aes(fill = status)) +
-    scale_fill_manual(values = c("orange4", "yellow2","orange2","white")) +
+    geom_sf(aes(fill = status), show.legend=TRUE) +
+    scale_fill_manual(
+      values = c("#c93232", "#f2bd35", "yellow2","#acdb69", "#fefefe"),
+      drop = FALSE) +
     labs(fill = "Rt <= 1") +
     theme_minimal() 
   
@@ -292,19 +298,19 @@ gg_map_risco_classif <- function(shape){
 }
 
 gg_timeline_dots <- function(df){
-  
-  df %>% 
+  df <- df_dengue_chik_estados 
+  g_chart <- df %>% 
     mutate(
+      ano = as.numeric(ano),
       data = ifelse(ano ==  max(ano), max(ano), paste0(min(ano),"-",max(ano)-1)),
       ano = as.factor(ano)
     ) %>% 
-    ggplot(aes(x = reorder(codigo, inc, max), y = inc)) +
+    ggplot(aes(x = reorder(sigla, inc_acumulada, max), y = inc_acumulada)) +
     geom_point(aes(color = data), size =  4) + 
     scale_color_manual(values = c('grey70', 'red'))+
     theme(
       panel.background = element_blank(),
       panel.grid.major.y  = element_line(linetype = "dotted",color = "grey", linewidth = 0.5),
-      legend.key = element_blank(),
       legend.text = element_text(size = 16),
       legend.title = element_text(size = 16,hjust = 0.5),
       legend.position = "bottom",
@@ -319,11 +325,13 @@ gg_timeline_dots <- function(df){
          y = "Incidência por 100 mil habitantes",
          x = "",
          color = "") +
-    facet_wrap(~CID10, ncol = 1, scales = "free",
-               labeller = labeller(CID10 = c("A92.0" = "Chikungunya","A90" = "Dengue")))
+    facet_wrap(~arbovirose, ncol = 1, scales = "free")
+  
+  return(g_chart)
 }
 
 gg_inc_dengue_chikv <- function(df){
+  df <- df_inc_dengue_chik
   
   df %>% 
     ggplot() + 
@@ -351,6 +359,5 @@ gg_inc_dengue_chikv <- function(df){
     labs(
       x = "SE/Ano",
       y = "Incidência (dengue + chikungunya) por 100 mil hab.") +
-    facet_geo(~uf, grid = "br_states_grid1", scales = "free_y")
+    facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y")
 }
-  
