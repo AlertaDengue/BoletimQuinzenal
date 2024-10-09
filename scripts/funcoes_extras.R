@@ -361,3 +361,97 @@ gg_inc_dengue_chikv <- function(df){
       y = "Incidência (dengue + chikungunya) por 100 mil hab.") +
     facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y")
 }
+
+verificar_tendencia_regressao <- function(df) {
+
+    tempos <- 1:(ncol(df)-1)
+  
+  calcular_tendencia <- function(valores) {
+    dados <- data.frame(tempo = tempos, valor = valores)
+    
+    modelo <- lm(valor ~ tempo, data = dados)
+    
+    coef_angular <- coef(modelo)[2]
+    
+    if (coef_angular > 0) {
+      return("Crescente")
+    } else if (coef_angular < 0) {
+      return("Decrescente")
+    } else {
+      return("Estável")
+    }
+  }
+  
+  df$tendencia <- apply(df[ , 2:ncol(df)], 1, calcular_tendencia)
+  return(df)
+}
+
+adicionar_regiao <- function(df){
+  estados_regioes <- data.frame(
+    sigla = c("AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", 
+              "MT", "PA", "PB", "PE", "PI", "PR", "RJ", "RN", "RO", "RR", "RS", "SC", 
+              "SE", "SP", "TO"),
+    regiao = c("Norte", "Nordeste", "Norte", "Norte", "Nordeste", "Nordeste", "Centro-Oeste", 
+               "Sudeste", "Centro-Oeste", "Nordeste", "Sudeste", "Centro-Oeste", "Centro-Oeste", 
+               "Norte", "Nordeste", "Nordeste", "Nordeste", "Sul", "Sudeste", "Nordeste", 
+               "Norte", "Norte", "Sul", "Sul", "Nordeste", "Sudeste", "Norte")
+  )
+  
+  df <- df %>% 
+    left_join(estados_regioes, by = "sigla")
+  
+  return(df)
+}
+
+
+gerar_tabela_tendencia <- function(df, inc_max = 10){
+  tabela <- df %>% 
+    rename_with(~str_c(str_to_sentence(.))) %>% 
+    rename_with(~str_c(str_replace(., paste0("X", ano_selecionado), ""))) %>% 
+    gt(groupname_col = "Regiao") %>% 
+    data_color(
+      columns = 3:6,
+      colors = scales::col_numeric(alpha = T,
+                                   na.color = "#ffffff",
+                                   c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
+                                   domain = range(0, inc_max))
+    ) %>% 
+    cols_label(
+      Regiao = md("**Região**"),
+      Sigla = md("**Sigla**"),
+      Tendencia = md("**Tendência**")
+    )  %>%
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = list(cell_fill(color = "#ebebeb"), cell_text(weight = "bold")),
+      locations = cells_row_groups()
+    ) %>% 
+    cols_align(align = "center") %>% 
+    tab_spanner(columns = 3:6, md("**Semana epidêmica**")) %>% 
+    tab_style(
+      style = cell_text(weight = "bold", color = "darkgreen"),
+      locations = cells_body(
+        columns = "Tendencia", 
+        rows = Tendencia == "Decrescente"
+      )
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold", color = "red"),
+      locations = cells_body(
+        columns = "Tendencia", 
+        rows = Tendencia == "Crescente"
+      )
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold", color = "black"),
+      locations = cells_body(
+        columns = "Tendencia", 
+        rows = Tendencia == "Estável"
+      )
+    )
+  
+  return(tabela)
+}

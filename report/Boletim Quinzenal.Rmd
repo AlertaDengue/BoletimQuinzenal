@@ -30,10 +30,10 @@ Sys.setlocale("LC_TIME", "pt_BR.UTF-8")
 ```
 
 ```{r, include = FALSE}
-r_pkgs <- c("tidyverse", "AlertTools", "sf",
+r_pkgs <- c("tidyverse", "AlertTools", "sf", "arrow",
             "ggplot2", "ggpubr", "geofacet",
             "janitor", "kableExtra", 
-            "sjstats", "sjPlot", "gt", "arrow")
+            "sjstats", "sjPlot", "gt", "gtExtras")
 
 if(!"pacman" %in% rownames(installed.packages())) install.packages("pacman")
 pacman::p_load(char = r_pkgs)
@@ -76,7 +76,7 @@ shape <- st_read("../shape/rs_450_RepCor1.shp") %>%
 
 ```{r, include = FALSE}
 # Parametros
-ano <- 2024
+ano_selecionado <- year(Sys.Date())
 se_max_dengue  <- max(df_dengue$SE) # Semana epidemiologia mais recente
 se_max_chik  <- max(df_chik$SE) # Semana epidemiologia mais recente
 ultima_semana_dengue <- substr(se_max_dengue, 5, 6)
@@ -241,7 +241,7 @@ gg_map_risco_classif <- annotate_figure(
 
 # Ano selecionado
 df_ano_selecionado_dengue <- df_dengue %>% 
-  filter(as.numeric(substr(SE, 1, 4))  == ano) 
+  filter(as.numeric(substr(SE, 1, 4)) == ano_selecionado) 
 
 pop_brasil_ano_selecionado_dengue <- sum(df_ano_selecionado_dengue %>% 
                                            arrange(desc(SE)) %>% 
@@ -261,7 +261,7 @@ incidencia_acumulada_ano_selecionado_dengue <- total_casos_ano_selecionado_dengu
 
 # Ano anterior
 df_ano_anterior_dengue <- df_dengue %>% 
-  filter(as.numeric(substr(SE, 1, 4)) == (ano - 1))
+  filter(as.numeric(substr(SE, 1, 4)) == (ano_selecionado - 1))
 
 pop_brasil_ano_anterior_dengue <- sum(df_ano_anterior_dengue %>% 
                                         arrange(desc(SE)) %>% 
@@ -284,7 +284,7 @@ dif_prop_ano_dengue = total_casos_ano_selecionado_dengue/total_casos_ano_anterio
 
 # Ano selecionado
 df_ano_selecionado_chik <- df_chik %>% 
-  filter(as.numeric(substr(SE, 1, 4))  == ano) 
+  filter(as.numeric(substr(SE, 1, 4))  == ano_selecionado) 
 
 pop_brasil_ano_selecionado_chik <- sum(df_ano_selecionado_chik %>% 
                                          arrange(desc(SE)) %>% 
@@ -304,7 +304,7 @@ incidencia_acumulada_ano_selecionado_chik <- total_casos_ano_selecionado_chik/ p
 
 # Ano anterior
 df_ano_anterior_chik <- df_chik %>% 
-  filter(as.numeric(substr(SE, 1, 4)) == (ano - 1))
+  filter(as.numeric(substr(SE, 1, 4)) == (ano_selecionado - 1))
 
 pop_brasil_ano_anterior_chik <- sum(df_ano_anterior_chik %>% 
                                       arrange(desc(SE)) %>% 
@@ -327,7 +327,9 @@ dif_prop_ano_chik = total_casos_ano_selecionado_chik/total_casos_ano_anterior_ch
 # Total
 total_casos_ano_selecionado <- total_casos_ano_selecionado_dengue + total_casos_ano_selecionado_chik
 
-prop_casos_provaveis_total <- paste0(round(((total_casos_provaveis_ano_selecionado_dengue + total_casos_provaveis_ano_selecionado_chik)/(total_casos_ano_selecionado_dengue + total_casos_ano_selecionado_chik)) *100, 2),"%")
+total_casos_provaveis_ano_selecionado <- total_casos_provaveis_ano_selecionado_dengue + total_casos_provaveis_ano_selecionado_chik
+
+prop_casos_provaveis_total <- paste0(round(((total_casos_provaveis_ano_selecionado)/(total_casos_ano_selecionado_dengue + total_casos_ano_selecionado_chik)) *100, 2),"%")
 
 dif_prop_ano_total <- (total_casos_ano_selecionado_dengue + total_casos_ano_selecionado_chik)/(total_casos_ano_anterior_dengue + total_casos_ano_anterior_chik)
 
@@ -339,7 +341,7 @@ tabela_1 <- data.frame(
 ) %>% 
   knitr::kable(row.names = F,
                col.names = c("Agravo",
-                             "Casos suspeitos", 
+                             "Casos notificados", 
                              "Percentual de casos prováveis",
                              "Variação em relação ao ano passado"),
                align = c("cccc"),
@@ -384,19 +386,20 @@ Semana epidemiológica `r ultima_semana_dengue`: `r ultima_semana_inicio` – `r
 \textbf{AVISOS:}
 \end{center}
 
+Esse boletim analisa as condições de transmissão da chikungunya e dengue no Brasil utilizando dados de clima e notificação de casos fornecidos pela Secretaria de Vigilância em Saúde (SVS). A partir desses dados são analisadas as condições de receptividade climática, transmissão e incidência (ver definição), tendo como objetivo contribuir para a tomada de decisão na sala de situação.
+
 Todas as análises do InfoDengue são baseadas nos casos notificados, sem excluir os casos descartados. Isso ocorre devido à grande heterogeneidade no descarte de casos e porque a análise visa ser oportuna, não sendo viável esperar pelo tempo necessário para os testes laboratoriais. Portanto, utiliza-se um sistema de nowcasting para a predição de dados.
 
 Os dados provenientes dos sistemas de notificação de casos podem conter erros de digitação ou preenchimento, afetando um ou mais dos diversos campos de registro. Por isso, as notificações são constantemente avaliadas para correções necessárias, conforme a análise da rede de vigilância e das equipes locais responsáveis por cada registro.
 
-
 \vspace{\fill}
-\textbf{Créditos:}
+\begin{center}
+\textbf{CRÉDITOS:}
+\end{center}
 
-Produção:
+**Produção:** Equipe Infodengue.
 
-Autoria:
-
-Como citar:  
+**Como citar:** Infodengue. Informe sobre situação de notificações de dengue no país, PROCC/Fiocruz e EMap/FGV, DATA.
 
 \newpage
 
@@ -410,35 +413,23 @@ Como citar:
 \begin{itemize}
 \item Atualmente, quase todas as UFs estão com notificação baixa ou em tendência de queda de notificação de dengue. 
 \item Amapá, Roraima, Rondônia e Paraíba apresentam tendência de aumento de casos estimados, 
-\item Redução no número de municípios isolados no sul, sudeste e nordeste em alerta de transmissão alta para os padrões históricos.. 
-\item A curva de incidência parece apresentar um leve padrão de ascendência no momento, diferente do padrão previsto de queda , conforme é visível na figura 1..
+\item Redução no número de municípios isolados no sul, sudeste e nordeste em alerta de transmissão alta para os padrões históricos. 
+\item A curva de incidência parece apresentar um leve padrão de ascendência no momento, diferente do padrão previsto de queda , conforme é visível na figura 1.
 \end{itemize}
 
 \newpage
 **Situação das Arboviroses no Brasil**
-\vspace{2cm}
 
-Esse boletim analisa as condições de transmissão da chikungunya e dengue no Brasil utilizando dados de clima e notificação de casos fornecidos pela Secretaria de Vigilância em Saúde (SVS). A partir desses dados são analisadas as condições de receptividade climática, transmissão e incidência (ver definição), tendo como objetivo contribuir para a tomada de decisão na sala de situação.
-
-Esse ano foram notificados até o momento, `r total_casos_ano_selecionado` casos suspeitos de dengue, o que corresponde a uma incidência acumulada de `r incidencia_acumulada_ano_selecionado_dengue` casos por 100.000 habitantes. Esse valor corresponde a `r dif_prop_ano_dengue` vezes o registrado no ano passado, no mesmo período. Desse total, `r prop_casos_provaveis_dengue` são classificados como prováveis. As informações sobre chikungunya também são apresentadas na tabela 1. 
+Esse ano foram notificados até o momento, `r prettyNum(total_casos_ano_selecionado, big.mark=".", decimal.mark = ",", scientific=FALSE)` casos suspeitos de dengue e chikungunya, o que corresponde a uma incidência acumulada de `r prettyNum(round(incidencia_acumulada_ano_selecionado_dengue, 0), big.mark=".", decimal.mark = ",", scientific=FALSE)` casos de dengue e `r prettyNum(round(incidencia_acumulada_ano_selecionado_chik, 0), big.mark=".", decimal.mark = ",", scientific=FALSE)` casos de chikungunya por 100 mil habitantes. Para dengue, esse valor corresponde a `r prettyNum(round(dif_prop_ano_dengue, 2), big.mark=".", decimal.mark = ",", scientific=FALSE)` vezes o registrado no ano passado, enquanto para chikungunya, a `r prettyNum(round(dif_prop_ano_chik, 2), big.mark=".", decimal.mark = ",", scientific=FALSE)`.
+Do total de casos notificados, `r prettyNum(total_casos_provaveis_ano_selecionado, big.mark=".", decimal.mark = ",", scientific=FALSE)` foram classificados como provaveis até o momento. Isso é, `r  paste0(prettyNum(round(100 - total_casos_provaveis_ano_selecionado/total_casos_ano_selecionado *100, 2), big.mark=".", decimal.mark = ",", scientific=FALSE), "%")` foi descartado. 
 
 **Tabela 1.** Casos notificados de arboviroses até a semana `r ultima_semana_dengue`
 
 `r tabela_1`
 
-Casos prováveis X Casos Notificados : Incluir frase sobre a figura…
-
-A figura abaixo apresenta a média anual da razão entre os casos prováveis e notificados para todos os estados nos anos entre 2020 e 2024, quanto maior a razão menor o número de casos notificados descartados. Apesar da variabilidade observada nos diferentes anos, alguns estados do $Norte$ como $AC, AM e RO$ tiveram uma taxa de descarte muito maior em 2024 em relação com os outros anos. Ademais, estados como $DF, MG e PR$ que tiveram grandes epidemias em 2024 tiveram uma taxa de descarte menor em relação aos outros anos. 
-
-```{r, fig.align="center", fig.width = 12, fig.height = 3}
-# Adicionar figura 1
-```
-
-**Figura 1.** Razão entre casos prováveis e notificados por ano e Estado.`
-
 **Casos Acumulados por Estados**
 
-Na figura abaixo estão representadas as incidências de casos notificados acumulados por 100 mil habitantes até a semana `r ultima_semana_dengue`, em comparação com as incidências históricas dos últimos 5 anos .
+Na figura 1 estão representadas as incidências acumuladas anuais de dengue e chikungunya, por unidade da federação. Os pontos cinzas indicam os valores em anos anteriores (2010 a 2023). O ponto vermelho indica a incidência acumulada até a semana `r ultima_semana_dengue`.
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 9}
 df_dengue_chik_estados <- df_dengue %>% 
@@ -470,15 +461,16 @@ df_dengue_chik_estados %>%
   gg_timeline_dots()
 ```
 
-**Figura 2.** Incidência acumulada por 100 mil habitantes sobre os casos notificados até a semana `r ultima_semana_dengue`
+**Figura 1.** Incidência acumulada por 100 mil habitantes sobre os casos notificados até a semana `r ultima_semana_dengue`
 
 As curvas de casos semanais de dengue e chikungunya são apresentadas na figura abaixo, com o nowcast (a figura parece com essa.). Observa-se que está (dentro/fora) do previsto.
 
-<!-- Adicionar figura 3 -->
-
+\vspace{1cm}
+**Adicionar figura 3**
+\newline
 **Figura 3.** Curvas de previsão de casos semanais no Brasil para Dengue e Chikungunya  
 
-As curvas de incidência dos casos suspeitos notificados e os casos estimados de acordo com o nowcast, por estado, são apresentadas na figura 4. Observa-se uma leve tendência de crescimento dos casos estimados no Amapá, Amazonas, Roraima, Pernambuco e Distrito Federal. As notificações no Amapá seguem um padrão de queda atípica, a investigar. Pará, Tocantins, Bahia, Mato Grosso, Mato Grosso do Sul, Minas, São Paulo e Paraná registram certa estabilidade no número de casos estimados, como esperado para o período. Os demais estados registram tendência de queda dos números estimados pelo nowcast na semana `r ultima_semana_dengue`, 
+As curvas de incidência dos casos notificados e os casos estimados de acordo com o nowcast, por estado, são apresentadas na figura 4. Observa-se uma leve tendência de crescimento dos casos estimados no Amapá, Amazonas, Roraima, Pernambuco e Distrito Federal. As notificações no Amapá seguem um padrão de queda atípica, a investigar. Pará, Tocantins, Bahia, Mato Grosso, Mato Grosso do Sul, Minas, São Paulo e Paraná registram certa estabilidade no número de casos estimados, como esperado para o período. Os demais estados registram tendência de queda dos números estimados pelo nowcast na semana `r ultima_semana_dengue`, 
 
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 14}
@@ -512,7 +504,7 @@ df_inc_dengue_chik %>%
   gg_inc_dengue_chikv()
 ```
 
-**Figura 4.** Incidência de casos suspeitos de arboviroses (chikungunya + dengue) para as Unidades da Federação.
+**Figura 4.** Incidência de casos notificados de arboviroses (chikungunya + dengue) nas Unidades da Federação.
 
 \newpage
 **Panorama da tendência dos novos casos de arboviroses em todo o país até a semana atual**
@@ -525,11 +517,60 @@ A tabela abaixo mostra xx … É possível observar que até a semana `r ultima_
 
 **Tabela 2.** Situação dos estados em relação à notificação dos casos de dengue em 2024.
 
-<!-- Adicionar tabela 2 -->
+```{r}
+tabela_tendencia_por_uf_dengue <- df_dengue_uf %>% 
+  filter(as.numeric(substr(SE, 1, 4)) == ano_selecionado) %>% 
+  filter(SE >= max(SE) - 3) %>% 
+  arrange(SE) %>% 
+  dplyr::select(codigo, SE, inc) %>% 
+  pivot_wider(names_from = SE, values_from = inc) %>% 
+  janitor::clean_names() %>% 
+  mutate(codigo = as.character(codigo))
+
+tabela_tendencia_por_uf_dengue <- verificar_tendencia_regressao(tabela_tendencia_por_uf_dengue)
+
+tabela_tendencia_por_uf_dengue <- tabela_tendencia_por_uf_dengue %>% 
+  obter_siglas_codigos() %>% 
+  adicionar_regiao() %>% 
+  relocate(regiao, .before = codigo) %>% 
+  relocate(sigla, .after = regiao) %>% 
+  as_tibble() %>% 
+  dplyr::select(-c(codigo, estado))
+
+inc_max_dengue <- ceiling(max(tabela_tendencia_por_uf_dengue[3:6], na.rm = T))
+
+tabela_tendencia_por_uf_dengue %>% 
+  gerar_tabela_tendencia(inc_max = inc_max_dengue)
+```
 
 **Tabela 3.** Situação dos estados em relação à notificação dos casos de chikungunya em 2024.
 
-<!-- Adicionar tabela 3 -->
+```{r}
+tabela_tendencia_por_uf_chik <- df_chik_uf %>% 
+  filter(as.numeric(substr(SE, 1, 4)) == ano_selecionado) %>% 
+  filter(SE >= max(SE) - 3) %>% 
+  arrange(SE) %>% 
+  dplyr::select(codigo, SE, inc) %>% 
+  pivot_wider(names_from = SE, values_from = inc) %>% 
+  janitor::clean_names() %>% 
+  mutate(codigo = as.character(codigo))
+
+tabela_tendencia_por_uf_chik <- verificar_tendencia_regressao(tabela_tendencia_por_uf_chik)
+
+tabela_tendencia_por_uf_chik <- tabela_tendencia_por_uf_chik %>% 
+  obter_siglas_codigos() %>% 
+  adicionar_regiao() %>% 
+  relocate(regiao, .before = codigo) %>% 
+  relocate(sigla, .after = regiao) %>% 
+  as_tibble() %>% 
+  dplyr::select(-c(codigo, estado))
+
+inc_max_chik <- ceiling(max(tabela_tendencia_por_uf_chik[3:6], na.rm = T))
+
+tabela_tendencia_por_uf_chik %>% 
+  gerar_tabela_tendencia(inc_max = inc_max_chik)
+```
+
 
 \textbf{Estados / Regionais com aumento de Casos }
 \vspace{2cm}
