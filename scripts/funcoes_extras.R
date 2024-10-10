@@ -363,8 +363,8 @@ gg_inc_dengue_chikv <- function(df){
 }
 
 verificar_tendencia_regressao <- function(df) {
-
-    tempos <- 1:(ncol(df)-1)
+  
+  tempos <- 1:(ncol(df)-1)
   
   calcular_tendencia <- function(valores) {
     dados <- data.frame(tempo = tempos, valor = valores)
@@ -403,24 +403,66 @@ adicionar_regiao <- function(df){
   return(df)
 }
 
+construir_tabela_incidencia_por_semana <- function(df, var = "inc"){
+  
+  df <- df %>% 
+    filter(as.numeric(substr(SE, 1, 4)) == ano_selecionado) %>% 
+    filter(SE >= max(SE) - 3) %>% 
+    arrange(SE) %>% 
+    dplyr::select(codigo, SE, var) %>% 
+    pivot_wider(names_from = SE, values_from = var) %>% 
+    janitor::clean_names() %>% 
+    mutate(codigo = as.character(codigo))
+  
+  return(df)
+  
+}
 
-gerar_tabela_tendencia <- function(df, inc_max = 10){
+
+gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
+  
+  df <- df %>% 
+    janitor::clean_names() %>% 
+    tibble()
+  
+  semana_labels <- colnames(df)[3:6]
+  semana_labels <- substr(semana_labels, 6, 7)
+  
+  colnames(df) <- c("Regiao", "Sigla", 
+                    "S1_A", "S2_A", "S3_A", "S4_A", "tendencia_A", 
+                    "S1_B", "S2_B", "S3_B", "S4_B", "tendencia_B")
+  
   tabela <- df %>% 
-    rename_with(~str_c(str_to_sentence(.))) %>% 
-    rename_with(~str_c(str_replace(., paste0("X", ano_selecionado), ""))) %>% 
     gt(groupname_col = "Regiao") %>% 
+    tab_options(table.font.size = 11) %>% 
     data_color(
       columns = 3:6,
       colors = scales::col_numeric(alpha = T,
                                    na.color = "#ffffff",
                                    c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
-                                   domain = range(0, inc_max))
+                                   domain = range(0, inc_obs_max))
+    ) %>% 
+    data_color(
+      columns = 8:11,
+      colors = scales::col_numeric(alpha = T,
+                                   na.color = "#ffffff",
+                                   c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
+                                   domain = range(0, inc_est_max))
     ) %>% 
     cols_label(
-      Regiao = md("**Região**"),
-      Sigla = md("**Sigla**"),
-      Tendencia = md("**Tendência**")
-    )  %>%
+      Regiao = "Região",
+      Sigla = "Sigla",
+      S1_A = semana_labels[1],
+      S2_A = semana_labels[2],
+      S3_A = semana_labels[3], 
+      S4_A = semana_labels[4],
+      tendencia_A = "Tendência",
+      S1_B = semana_labels[1],
+      S2_B = semana_labels[2],
+      S3_B = semana_labels[3], 
+      S4_B = semana_labels[4],
+      tendencia_B = "Tendência"
+    ) %>%
     tab_style(
       style = cell_text(weight = "bold"),
       locations = cells_column_labels()
@@ -429,29 +471,84 @@ gerar_tabela_tendencia <- function(df, inc_max = 10){
       style = list(cell_fill(color = "#ebebeb"), cell_text(weight = "bold")),
       locations = cells_row_groups()
     ) %>% 
+    fmt_number(
+      columns = c(3:6, 8:11),
+      decimals = 2
+    ) %>% 
     cols_align(align = "center") %>% 
-    tab_spanner(columns = 3:6, md("**Semana epidêmica**")) %>% 
+    tab_spanner(columns = 3:6, md("**Incidência observada**")) %>% 
+    tab_spanner(columns = 8:11, md("**Incidência estimada**")) %>% 
     tab_style(
       style = cell_text(weight = "bold", color = "darkgreen"),
       locations = cells_body(
-        columns = "Tendencia", 
-        rows = Tendencia == "Decrescente"
+        columns = "tendencia_A", 
+        rows = tendencia_A == "Decrescente"
       )
     ) %>%
     tab_style(
       style = cell_text(weight = "bold", color = "red"),
       locations = cells_body(
-        columns = "Tendencia", 
-        rows = Tendencia == "Crescente"
+        columns = "tendencia_A", 
+        rows = tendencia_A == "Crescente"
       )
     ) %>%
     tab_style(
       style = cell_text(weight = "bold", color = "black"),
       locations = cells_body(
-        columns = "Tendencia", 
-        rows = Tendencia == "Estável"
+        columns = "tendencia_A", 
+        rows = tendencia_A == "Estável"
+      )
+    ) %>% 
+    tab_style(
+      style = cell_text(weight = "bold", color = "darkgreen"),
+      locations = cells_body(
+        columns = "tendencia_B", 
+        rows = tendencia_B == "Decrescente"
+      )
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold", color = "red"),
+      locations = cells_body(
+        columns = "tendencia_B", 
+        rows = tendencia_B == "Crescente"
+      )
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold", color = "black"),
+      locations = cells_body(
+        columns = "tendencia_B", 
+        rows = tendencia_B == "Estável"
       )
     )
   
   return(tabela)
+}
+
+
+gerar_grafico_inc <- function(df){
+  
+  chart <-  df %>% 
+    ggplot(aes(x = semana)) +
+    geom_ribbon(aes(ymin = 0, ymax = P25, group = 1), fill = "#cffcb6") + 
+    geom_ribbon(aes(ymin = P25, ymax = P50, group = 1), fill = "#f6fa9d") + 
+    geom_ribbon(aes(ymin = P50, ymax = P75, group = 1), fill = "#fcb48b") + 
+    geom_ribbon(aes(ymin = P75, ymax = P90, group = 1), fill = "#fa9393") +
+    geom_ribbon(aes(ymin = P90, ymax = Inf, group = 1), fill = "#ff5959", alpha = 0.5) +
+    geom_line(aes(y = ifelse(P25 > 0, P25, NA), group = 1), linetype = "dashed", color = "darkgreen", size = 0.5) + 
+    geom_line(aes(y = P50, group = 1), linetype = "dashed",color = "gold", size = 0.5) +                       
+    geom_line(aes(y = P75, group = 1), linetype = "dashed", color = "darkorange", size = 0.5) + 
+    geom_line(aes(y = P90, group = 1), linetype = "dashed", color = "darkred", size = 0.5) +
+    geom_line(data = df_modelo_dengue_nacional_atual, aes(y = inc, group = 1), color = "black", size = 0.75) +
+    scale_x_continuous(breaks = seq(0, 52, by = 4)) + 
+    theme_minimal() +                                         
+    theme(
+      legend.position = "top",                       
+      panel.grid.minor = element_blank()
+    ) +
+    labs(
+      x = "Epiweek",
+      y = "Incidência observada de dengue (por 100 mil hab.)"
+    )
+  
+  return(chart)
 }

@@ -33,7 +33,7 @@ Sys.setlocale("LC_TIME", "pt_BR.UTF-8")
 r_pkgs <- c("tidyverse", "AlertTools", "sf", "arrow",
             "ggplot2", "ggpubr", "geofacet",
             "janitor", "kableExtra", 
-            "sjstats", "sjPlot", "gt", "gtExtras")
+            "sjstats", "sjPlot", "gt", "gtExtras", "INLA")
 
 if(!"pacman" %in% rownames(installed.packages())) install.packages("pacman")
 pacman::p_load(char = r_pkgs)
@@ -142,10 +142,72 @@ memUFsazonal.chi <- memUFsazonal.chi %>%
   obter_siglas_codigos(merge_by = "codigo")
 ```
 
+```{r}
+# INLA
+formula_inla_br <- inc ~ -1 +
+  f(semana, model = "ar1", constr = F) +
+  f(ano, model = "iid", constr = T)
+```
+
 
 ```{r, include = FALSE}
 # Dengue
-df_dengue_nacional <- df_dengue %>% obter_metricas_nacionais() #Nacional
+df_dengue_nacional <- df_dengue %>% #Nacional
+  obter_metricas_nacionais() %>% 
+  mutate(
+    ano = as.numeric(substr(SE, 1, 4)),
+    semana = as.numeric(substr(SE, 5, 6))
+  ) 
+
+df_modelo_dengue_nacional <- df_dengue_nacional %>% 
+  # filter(ano < ano_selecionado) %>% 
+  filter(semana < 53) #%>% 
+# mutate(
+#   ano = factor(ano, levels = c(min(ano, na.rm = T):max(ano, na.rm = T))),
+#   semana = factor(semana, levels = c(min(semana, na.rm = T):max(semana, na.rm = T)))
+# )
+
+df_modelo_dengue_nacional_atual <- df_dengue_nacional %>% 
+  filter(ano == ano_selecionado) %>% 
+  filter(semana < 53) #%>% 
+# mutate(
+#   semana = factor(semana, levels = c(1:52))
+# )
+
+inla_model_br_dengue <- inla(formula = formula_inla_br, 
+                             data = df_modelo_dengue_nacional,
+                             family = "gaussian",
+                             control.predictor = list(compute = TRUE,
+                                                      quantiles = c(0.025, 0.5, 0.75, 0.90))
+)
+
+summary_inla <- inla_model_br_dengue$summary.fitted.values %>% 
+  janitor::clean_names()
+
+df_percentis <- data.frame(
+  semana = df_modelo_dengue_nacional$semana, 
+  P25 = summary_inla$x0_025quant,
+  P50 = summary_inla$x0_5quant,
+  P75 = summary_inla$x0_75quant,
+  P90 = summary_inla$x0_9quant
+) %>% 
+  gather(key = "percentil", value = "valor", -semana) %>% 
+  group_by(semana, percentil) %>% 
+  reframe(
+    mediana = median(valor, na.rm = T)
+  ) %>% 
+  mutate(
+    mediana = ifelse(mediana < 0, 0, mediana)
+  ) %>% 
+  pivot_wider(names_from = percentil, values_from = mediana) %>% 
+  data.frame()
+
+g_inc_br_dengue <- df_percentis %>% 
+  gerar_grafico_inc()
+```
+
+
+```{r, include = FALSE}
 df_dengue_uf <- df_dengue %>% obter_metricas_estaduais() # Estadual
 df_dengue_total <- df_dengue %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
 df_dengue_macro_se <- df_dengue %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
@@ -461,9 +523,10 @@ df_dengue_chik_estados %>%
   gg_timeline_dots()
 ```
 
-**Figura 1.** Incidência acumulada por 100 mil habitantes sobre os casos notificados até a semana `r ultima_semana_dengue`
+**Figura 1.** Incidência acumulada por 100 mil habitantes sobre os casos notificados até a semana `r ultima_semana_dengue`.
 
-As curvas de casos semanais de dengue e chikungunya são apresentadas na figura abaixo, com o nowcast (a figura parece com essa.). Observa-se que está (dentro/fora) do previsto.
+\newpage
+As curvas de casos semanais de dengue e chikungunya são apresentadas na figura 2. Observa-se que está (dentro/fora) do previsto.
 
 \vspace{1cm}
 **Adicionar figura 3**
@@ -518,18 +581,17 @@ A tabela abaixo mostra xx … É possível observar que até a semana `r ultima_
 **Tabela 2.** Situação dos estados em relação à notificação dos casos de dengue em 2024.
 
 ```{r}
-tabela_tendencia_por_uf_dengue <- df_dengue_uf %>% 
-  filter(as.numeric(substr(SE, 1, 4)) == ano_selecionado) %>% 
-  filter(SE >= max(SE) - 3) %>% 
-  arrange(SE) %>% 
-  dplyr::select(codigo, SE, inc) %>% 
-  pivot_wider(names_from = SE, values_from = inc) %>% 
-  janitor::clean_names() %>% 
-  mutate(codigo = as.character(codigo))
+tabela_tendencia_por_uf_inc_observada_dengue <- df_dengue_uf %>% 
+  construir_tabela_incidencia_por_semana(var = "inc")
 
-tabela_tendencia_por_uf_dengue <- verificar_tendencia_regressao(tabela_tendencia_por_uf_dengue)
+tabela_tendencia_por_uf_inc_estimada_dengue <- df_dengue_uf %>% 
+  construir_tabela_incidencia_por_semana(var = "incest")
 
-tabela_tendencia_por_uf_dengue <- tabela_tendencia_por_uf_dengue %>% 
+tabela_tendencia_por_uf_inc_observada_dengue <- verificar_tendencia_regressao(tabela_tendencia_por_uf_inc_observada_dengue)
+
+tabela_tendencia_por_uf_inc_estimada_dengue <- verificar_tendencia_regressao(tabela_tendencia_por_uf_inc_estimada_dengue)
+
+tabela_tendencia_por_uf_inc_observada_dengue <- tabela_tendencia_por_uf_inc_observada_dengue %>% 
   obter_siglas_codigos() %>% 
   adicionar_regiao() %>% 
   relocate(regiao, .before = codigo) %>% 
@@ -537,27 +599,37 @@ tabela_tendencia_por_uf_dengue <- tabela_tendencia_por_uf_dengue %>%
   as_tibble() %>% 
   dplyr::select(-c(codigo, estado))
 
-inc_max_dengue <- ceiling(max(tabela_tendencia_por_uf_dengue[3:6], na.rm = T))
+tabela_tendencia_por_uf_inc_estimada_dengue <- tabela_tendencia_por_uf_inc_estimada_dengue %>% 
+  obter_siglas_codigos() %>% 
+  adicionar_regiao() %>% 
+  relocate(regiao, .before = codigo) %>% 
+  relocate(sigla, .after = regiao) %>% 
+  as_tibble() %>% 
+  dplyr::select(-c(codigo, estado))
 
-tabela_tendencia_por_uf_dengue %>% 
-  gerar_tabela_tendencia(inc_max = inc_max_dengue)
+inc_obs_max_dengue <- ceiling(max(tabela_tendencia_por_uf_inc_observada_dengue[3:6], na.rm = T))
+inc_est_max_dengue <- ceiling(max(tabela_tendencia_por_uf_inc_estimada_dengue[3:6], na.rm = T))
+
+tabela_tendencia_por_uf_inc_observada_dengue %>% 
+  bind_cols(tabela_tendencia_por_uf_inc_estimada_dengue %>% 
+              dplyr::select(-c(regiao, sigla))) %>% 
+  gerar_tabela_tendencia(inc_obs_max = inc_obs_max_dengue, inc_est_max = inc_est_max_dengue)
 ```
 
 **Tabela 3.** Situação dos estados em relação à notificação dos casos de chikungunya em 2024.
 
 ```{r}
-tabela_tendencia_por_uf_chik <- df_chik_uf %>% 
-  filter(as.numeric(substr(SE, 1, 4)) == ano_selecionado) %>% 
-  filter(SE >= max(SE) - 3) %>% 
-  arrange(SE) %>% 
-  dplyr::select(codigo, SE, inc) %>% 
-  pivot_wider(names_from = SE, values_from = inc) %>% 
-  janitor::clean_names() %>% 
-  mutate(codigo = as.character(codigo))
+tabela_tendencia_por_uf_inc_observada_chik <- df_chik_uf %>% 
+  construir_tabela_incidencia_por_semana(var = "inc")
 
-tabela_tendencia_por_uf_chik <- verificar_tendencia_regressao(tabela_tendencia_por_uf_chik)
+tabela_tendencia_por_uf_inc_estimada_chik <- df_chik_uf %>% 
+  construir_tabela_incidencia_por_semana(var = "incest")
 
-tabela_tendencia_por_uf_chik <- tabela_tendencia_por_uf_chik %>% 
+tabela_tendencia_por_uf_inc_observada_chik <- verificar_tendencia_regressao(tabela_tendencia_por_uf_inc_observada_chik)
+
+tabela_tendencia_por_uf_inc_estimada_chik <- verificar_tendencia_regressao(tabela_tendencia_por_uf_inc_estimada_chik)
+
+tabela_tendencia_por_uf_inc_observada_chik <- tabela_tendencia_por_uf_inc_observada_chik %>% 
   obter_siglas_codigos() %>% 
   adicionar_regiao() %>% 
   relocate(regiao, .before = codigo) %>% 
@@ -565,12 +637,22 @@ tabela_tendencia_por_uf_chik <- tabela_tendencia_por_uf_chik %>%
   as_tibble() %>% 
   dplyr::select(-c(codigo, estado))
 
-inc_max_chik <- ceiling(max(tabela_tendencia_por_uf_chik[3:6], na.rm = T))
+tabela_tendencia_por_uf_inc_estimada_chik <- tabela_tendencia_por_uf_inc_estimada_chik %>% 
+  obter_siglas_codigos() %>% 
+  adicionar_regiao() %>% 
+  relocate(regiao, .before = codigo) %>% 
+  relocate(sigla, .after = regiao) %>% 
+  as_tibble() %>% 
+  dplyr::select(-c(codigo, estado))
 
-tabela_tendencia_por_uf_chik %>% 
-  gerar_tabela_tendencia(inc_max = inc_max_chik)
+inc_obs_max_chik <- ceiling(max(tabela_tendencia_por_uf_inc_observada_chik[3:6], na.rm = T))
+inc_est_max_chik <- ceiling(max(tabela_tendencia_por_uf_inc_estimada_chik[3:6], na.rm = T))
+
+tabela_tendencia_por_uf_inc_observada_chik %>% 
+  bind_cols(tabela_tendencia_por_uf_inc_estimada_chik %>% 
+              dplyr::select(-c(regiao, sigla))) %>% 
+  gerar_tabela_tendencia(inc_obs_max = inc_obs_max_chik, inc_est_max = inc_est_max_chik)
 ```
-
 
 \textbf{Estados / Regionais com aumento de Casos }
 \vspace{2cm}
