@@ -393,8 +393,8 @@ gg_timeline_dots <- function(df, se_max = se_max){
 gg_inc_dengue_chikv <- function(df){
   
   df %>% 
-    ggplot() + 
-    geom_bar(stat = "identity", aes(x = data, y = inc,fill = "Casos"))+
+    ggplot(aes(x = data, y = inc, fill = "Casos")) + 
+    geom_bar(stat = "identity")+
     geom_line(aes(x = data, y = inc_est, colour =  "Estimativa Corrigida")) +
     scale_x_date(
       breaks = "1 month",
@@ -405,7 +405,8 @@ gg_inc_dengue_chikv <- function(df){
     scale_colour_manual(values = "darkblue") +
     theme_light() +
     theme(
-      legend.title = element_blank(), legend.position = "bottom",
+      legend.title = element_blank(), 
+      legend.position = "bottom",
       legend.text = element_text(size = 12),
       axis.title = element_text(size = 18),
       axis.text.y = element_text(size = 12),
@@ -414,7 +415,7 @@ gg_inc_dengue_chikv <- function(df){
       strip.background = element_rect(fill = "white")
     ) +
     labs(
-      x = "SE/Ano",
+      x = "Mês/Ano",
       y = "Incidência (dengue + chikungunya) por 100 mil hab.") +
     facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y")
 }
@@ -624,8 +625,18 @@ get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem){
     geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'gray', alpha = 0.5) +
     geom_line(aes(y = inc_ano_anterior), color = "blue", show.legend = T) +
     geom_line(aes(y = inc_ano_atual), color = "red", show.legend = T) +
-    theme_minimal() +
-    labs(title = "Brasil", y = "Incidence", x = "SE") +
+    theme_light() +
+    theme(
+      legend.title = element_blank(), 
+      legend.position = "bottom",
+      legend.text = element_text(size = 12),
+      axis.title = element_text(size = 18),
+      axis.text.y = element_text(size = 12),
+      axis.text.x = element_text(size = 12),
+      strip.text.x = element_text(size = 14, colour = "black"),
+      strip.background = element_rect(fill = "white")
+    ) +
+    labs(title = "", y = "Incidência", x = "Semana epidemiológica") +
     facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y") 
   
   return(g_map)
@@ -635,7 +646,7 @@ get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem){
 ## Textos
 texto_1 <- function(df, arbovirose){
   if(length(df) == 0){
-    texto <- paste0("Nota-se que nenhuma UF esta apresentando a máxima incidência de ",arbovirose," nestao ano.")
+    texto <- paste0("Nota-se que nenhuma UF esta apresentando a máxima incidência de ",arbovirose," neste ano.")
   }else{
     df = paste(df,collapse=", ")
     

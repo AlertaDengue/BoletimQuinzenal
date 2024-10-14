@@ -53,7 +53,19 @@ df_dengue <- bind_rows(df_dengue) %>%
   mutate(
     incest = casos_est/pop * 100000,
     arbovirose = "Dengue"
-  )
+  ) %>% 
+  filter(substr(SE, 1, 4) < 2024)
+
+file_list <- list.files(path = "../data/cases2024/", pattern = "dengue.parquet", full.names = TRUE)
+df_dengue2 <- lapply(file_list, read_parquet)
+df_dengue2 <- bind_rows(df_dengue2) %>% 
+  left_join(muns %>% 
+              dplyr::select(-nome),, by = "municipio_geocodigo") %>% 
+  mutate(
+    incest = casos_est/pop * 100000,
+    arbovirose = "Dengue"
+  ) %>% 
+  filter(substr(SE, 1, 4) >= 2024)
 
 file_list <- list.files(path = "../data/casos_chik/", pattern = ".parquet", full.names = TRUE)
 df_chik <- lapply(file_list, read_parquet)
@@ -63,7 +75,25 @@ df_chik <- bind_rows(df_chik) %>%
   mutate(
     incest = casos_est/pop * 100000,
     arbovirose = "Chikungunya"
-  )
+  ) %>% 
+  filter(substr(SE, 1, 4) < 2024)
+
+file_list <- list.files(path = "../data/cases2024/", pattern = "chik.parquet", full.names = TRUE)
+df_chik2 <- lapply(file_list, read_parquet)
+df_chik2 <- bind_rows(df_chik2) %>% 
+  left_join(muns %>% 
+              dplyr::select(-nome),, by = "municipio_geocodigo") %>% 
+  mutate(
+    incest = casos_est/pop * 100000,
+    arbovirose = "Chikungunya"
+  ) %>% 
+  filter(substr(SE, 1, 4) >= 2024)
+
+df_dengue <- df_dengue %>% 
+  bind_rows(df_dengue2)
+
+df_chik <- df_chik %>% 
+  bind_rows(df_chik2)
 
 df_dengue_chik <- df_dengue %>% 
   bind_rows(df_chik)
@@ -72,10 +102,12 @@ shape <- st_read("../shape/rs_450_RepCor1.shp") %>%
   rename(regional_id = primary.id) %>% 
   mutate(regional_id = as.character((regional_id))) %>% 
   dplyr::select(-c(id, secondary)) %>% 
-  left_join(muns %>% 
-              dplyr::select(regional_id, regional) %>% 
-              distinct(regional_id, .keep_all = T),
-            by = "regional_id")
+  left_join(
+    muns %>% 
+      dplyr::select(regional_id, regional) %>% 
+      distinct(regional_id, .keep_all = T),
+    by = "regional_id"
+  )
 ```
 
 
@@ -138,18 +170,20 @@ memReganual.chi <- memReganual.chi %>%
   ) %>% 
   obter_siglas_codigos(merge_by = "codigo")
 
-# memUFsazonal.chi <- memUFsazonal.chi %>% 
-#   rename(
-#     codigo = uf) %>% 
-#   mutate(
-#     codigo = as.character(codigo)
-#   ) %>% 
-#   obter_siglas_codigos(merge_by = "codigo")
+memUFsazonal.chi <- memUFsazonal.chi %>%
+  rename(
+    codigo = uf) %>%
+  mutate(
+    codigo = as.character(codigo)
+  ) %>%
+  obter_siglas_codigos(merge_by = "codigo")
 ```
 
 
 ```{r, include = FALSE}
-df_dengue_uf <- df_dengue %>% obter_metricas_estaduais() %>% # Estadual
+df_dengue_nacional <- df_dengue %>% obter_metricas_nacionais() #Nacional
+df_dengue_uf <- df_dengue %>% 
+  obter_metricas_estaduais() %>% # Estadual
   mutate(
     ano = as.numeric(substr(SE, 1, 4)),
     semana = as.numeric(substr(SE, 5, 6))
@@ -196,7 +230,12 @@ gg_map_risco_classif_dengue <- obter_mapa_risco_classif(
 ```{r, include = FALSE}
 # Chikungunya
 df_chik_nacional <- df_chik %>% obter_metricas_nacionais() #Nacional
-df_chik_uf <- df_chik %>% obter_metricas_estaduais() # Estadual
+df_chik_uf <- df_chik %>% 
+  obter_metricas_estaduais() %>% # Estadual
+  mutate(
+    ano = as.numeric(substr(SE, 1, 4)),
+    semana = as.numeric(substr(SE, 5, 6))
+  )  # Estadual
 df_chik_total <- df_chik %>% obter_metricas_estaduais_por_ano() # Estadual (por ano)
 df_chik_macro_se <- df_chik %>% obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
 df_chik_reg <- df_chik %>% obter_metricas_regionais_por_semana() %>% 
@@ -407,13 +446,13 @@ Os dados provenientes dos sistemas de notificação de casos podem conter erros 
 
 <!-- Texto humano -->
 \begin{itemize}
-\item Atualmente, quase todas as UFs estão com notificação baixa ou em tendência de queda de notificação de dengue. 
-\item Amapá, Roraima, Rondônia e Paraíba apresentam tendência de aumento de casos estimados, 
-\item Redução no número de municípios isolados no sul, sudeste e nordeste em alerta de transmissão alta para os padrões históricos. 
-\item A curva de incidência parece apresentar um leve padrão de ascendência no momento, diferente do padrão previsto de queda , conforme é visível na figura 1.
+\item Iniciamos uma nova temporada típica na SE 40 2024, com curvas de casos estimados para arboviroses registrando leves tendências de aumentos em estados do Sul, Sudeste, Norte e Nordeste.
+\item As incidências estimadas para dengue  se encontram decrescentes e estabilizadas na maior parte dos estados, com exceção de um crescimento leve nos  estados do Paraná, Santa Catarina e Roraima e Amapá;
+\item Estados do Sul , RJ , SP, PA, AP e AM com atividade acima do histórico, sendo igual ou acima do observado no ano passado, que por sua vez, já haviam sido maiores que o histórico.
+\item Santa Catarina e Paraná apresentando incidências acima dos canais endêmicos, a despeito da baixa receptividade climática no período. 
 \end{itemize}
 
-\newpage
+\vspace{2cm}
 **Situação das Arboviroses no Brasil**
 
 Esse ano foram notificados até o momento, `r prettyNum(total_casos_ano_selecionado, big.mark=".", decimal.mark = ",", scientific=FALSE)` casos suspeitos de dengue e chikungunya, o que corresponde a uma incidência acumulada de `r prettyNum(round(incidencia_acumulada_ano_selecionado_dengue, 0), big.mark=".", decimal.mark = ",", scientific=FALSE)` casos de dengue e `r prettyNum(round(incidencia_acumulada_ano_selecionado_chik, 0), big.mark=".", decimal.mark = ",", scientific=FALSE)` casos de chikungunya por 100 mil habitantes. Para dengue, esse valor corresponde a `r prettyNum(round(dif_prop_ano_dengue, 2), big.mark=".", decimal.mark = ",", scientific=FALSE)` vezes o registrado no ano passado, enquanto para chikungunya, a `r prettyNum(round(dif_prop_ano_chik, 2), big.mark=".", decimal.mark = ",", scientific=FALSE)`.
@@ -423,9 +462,32 @@ Do total de casos notificados, `r prettyNum(total_casos_provaveis_ano_selecionad
 
 `r tabela_1`
 
+\newpage
+**Curvas de incidência e limiares epidemicos para dengue**
+
+```{r, fig.align="center", fig.width = 12, fig.height = 14}
+get_map_mem_incidencia(
+  df_uf_inc = df_dengue_uf,
+  df_uf_mem = memUFsazonal
+)
+```
+**Figura 1.** Curvas de incidência e limiares epidemicos para dengue até a semana epidemiológica `r ultima_semana_dengue`.
+
+\newpage
+**Curvas de incidência e limiares epidemicos para chikungunya**
+
+```{r, fig.align="center", fig.width = 12, fig.height = 14}
+get_map_mem_incidencia(
+  df_uf_inc = df_chik_uf,
+  df_uf_mem = memUFsazonal.chi
+)
+```
+**Figura 2.** Curvas de incidência e limiares epidemicos para chikungunya até a semana epidemiológica `r ultima_semana_chik`.
+
+\newpage
 **Casos Acumulados por Estados**
 
-Na figura 1 e 2 estão representadas as incidências máximas anuais de dengue e chikungunya, por unidade da federação. Os pontos cinzas indicam os valores para os anos anteriores (2010 a 2023), o ponto vermelho indica a incidência máxima em 2024 e o ponto laranja a incidência na semana `r ultima_semana_dengue`.
+Na figura 3 e 4 estão representadas as incidências máximas anuais de dengue e chikungunya, por unidade da federação. Os pontos cinzas indicam os valores para os anos anteriores (2010 a 2023), o ponto vermelho indica a incidência máxima em 2024 e o ponto laranja a incidência na semana `r ultima_semana_dengue`.
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 9}
 df_dengue_chik_estados <- df_dengue_chik %>% 
@@ -491,7 +553,7 @@ df_dengue_chik_estados <- df_dengue_chik_estados_casos %>%
   ) %>% 
   obter_siglas_codigos() 
 
-df_dengue_chik_estados$estado <- stringi::stri_unescape_unicode(df_dengue_chik_estados$estado)
+df_dengue_chik_estados$estado <-  stringi::stri_unescape_unicode(df_dengue_chik_estados$estado)
 
 semana_epidemica_dengue_chik_estados <- df_dengue_chik_estados %>% 
   group_by(arbovirose, sigla) %>% 
@@ -518,7 +580,7 @@ df_dengue_chik_estados %>%
   filter(arbovirose == "Dengue") %>% 
   gg_timeline_dots()
 ```
-**Figura 1.** Incidência acumulada por 100 mil habitantes sobre os casos notificados de dengue até a semana `r ultima_semana_dengue`.
+**Figura 3.** Incidência acumulada por 100 mil habitantes sobre os casos notificados de dengue até a semana `r ultima_semana_dengue`.
 
 ```{r}
 chik_semana_epidemica_estados <- semana_epidemica_dengue_chik_estados %>% 
@@ -536,18 +598,18 @@ df_dengue_chik_estados %>%
   filter(arbovirose == "Chikungunya") %>% 
   gg_timeline_dots()
 ```
-**Figura 2.** Incidência acumulada por 100 mil habitantes sobre os casos notificados de chikungunya até a semana `r ultima_semana_dengue`.
+**Figura 4.** Incidência acumulada por 100 mil habitantes sobre os casos notificados de chikungunya até a semana `r ultima_semana_dengue`.
+
+<!-- \newpage -->
+<!-- As curvas de casos semanais de dengue e chikungunya são apresentadas na figura 2. Observa-se que está (dentro/fora) do previsto. -->
+
+<!-- \vspace{1cm} -->
+<!-- **Adicionar figura 3** -->
+<!-- \newline -->
+<!-- **Figura 3.** Curvas de previsão de casos semanais no Brasil para Dengue e Chikungunya   -->
 
 \newpage
-As curvas de casos semanais de dengue e chikungunya são apresentadas na figura 2. Observa-se que está (dentro/fora) do previsto.
-
-\vspace{1cm}
-**Adicionar figura 3**
-\newline
-**Figura 3.** Curvas de previsão de casos semanais no Brasil para Dengue e Chikungunya  
-
-\newpage
-As curvas de incidência dos casos notificados e os casos estimados de acordo com o nowcast, por estado, são apresentadas na figura 4. Observa-se uma leve tendência de crescimento dos casos estimados no Amapá, Amazonas, Roraima, Pernambuco e Distrito Federal. As notificações no Amapá seguem um padrão de queda atípica, a investigar. Pará, Tocantins, Bahia, Mato Grosso, Mato Grosso do Sul, Minas, São Paulo e Paraná registram certa estabilidade no número de casos estimados, como esperado para o período. Os demais estados registram tendência de queda dos números estimados pelo nowcast na semana `r ultima_semana_dengue`, 
+As curvas de incidência dos casos notificados e os casos estimados de acordo com o nowcast, por estado, são apresentadas na figura 5. Observa-se uma uma tendência geral de queda nas taxas de incidência em todos os estados ao longo do tempo, com diferenças no nível inicial e na taxa de queda entre os estados.
 
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 14}
@@ -580,13 +642,12 @@ df_inc_dengue_chik$estado <- stringi::stri_unescape_unicode(df_inc_dengue_chik$e
 df_inc_dengue_chik %>% 
   gg_inc_dengue_chikv()
 ```
-
-**Figura 4.** Incidência de casos notificados de arboviroses (chikungunya + dengue) nas Unidades da Federação.
+**Figura 5.** Incidência de casos notificados de arboviroses (chikungunya + dengue) nas Unidades da Federação.
 
 \newpage
 **Panorama da tendência dos novos casos de dengue até a semana `r ultima_semana_dengue`**
 
-A tabela 2 apresenta um panorama sobre a tendência da incidência de dengue para casos notificados e estimados em todo o país até a semana `r ultima_semana_dengue`. A **tendência** indica se os casos estão crescendo ou decrescendo significativamente.
+A tabela 2 apresenta um panorama sobre a tendência da incidência de dengue para casos notificados e estimados em todo o país até a semana `r ultima_semana_dengue`. As **setas** indicam se os casos estão crescendo ou decrescendo significativamente.
 
 <!-- , e o **Rt** é a taxa de crescimento do último mês. O **Rt** mede o número médio de casos secundários gerados por casos primários considerando um intervalo de 3 semanas, e a **\%pop** indica a porcentagem da população da UF vivendo em regionais com transmissão alta para os padrões históricos.  -->
 
@@ -677,39 +738,49 @@ tab_tendencia_por_uf_inc_observada_chik
 \textbf{Estados/Regionais com aumento de Casos de dengue}
 
 ```{r, include = FALSE}
-n_regionais_alta_incidencia_dengue <- shape_dengue %>% filter(status == "Alta incidência") %>% pull() %>% length()
+n_regionais_incidencia_dengue_alto_em_subida <- shape_dengue %>% filter(status == "Alto em subida") %>% pull() %>% length()
+
+n_regionais_incidencia_dengue_alto_estavel <- shape_dengue %>% filter(status == "Alto estavel") %>% pull() %>% length()
+
+n_regionais_incidencia_dengue_alto_em_queda <- shape_dengue %>% filter(status == "Alto em queda") %>% pull() %>% length()
+
+n_regionais_incidencia_dengue_baixo <- shape_dengue %>% filter(status == "Baixo ou moderado") %>% pull() %>% length()
 ```
 
-Do total de 450 regionais, `r n_regionais_alta_incidencia_dengue` estão indicando alta incidência de suspeição de dengue e `r n_regionais_alta_incidencia_dengue` de chikungunya (Figura 4). No Amazonas, na região do Alto Juruá e Triângulo esse indicador aponta aumento. No nordeste, observa-se a $9^a$ região de saúde no Alagoas, $9^a$ na Paraíba, Baturité no CE. No sudeste, Mananciais em SP.
+De acordo com a figura 6, do total de 450 regionais, `r n_regionais_incidencia_dengue_alto_em_subida` estão com alta incidência e continuam subindo, `r n_regionais_incidencia_dengue_alto_estavel` estão com alta, porém estável, `r n_regionais_incidencia_dengue_alto_em_queda` estão com alta, mas em queda e `r n_regionais_incidencia_dengue_baixo` estão com baixa ou moderada incidência de dengue.
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 14}
 gg_map_risco_classif_dengue
 ```
-
-**Figura 5.** Regionais de saúde que a incidência de dengue esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
+**Figura 6.** Regionais de saúde que a incidência de dengue esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
 
 \newpage
 \textbf{Estados/Regionais com aumento de casos de chikungunya}
 
 ```{r, include = FALSE}
-n_regionais_alta_incidencia_chik <- shape_chik %>% filter(status == "Alta incidência") %>% pull() %>% length()
+n_regionais_incidencia_chik_alto_em_subida <- shape_chik %>% filter(status == "Alto em subida") %>% pull() %>% length()
+
+n_regionais_incidencia_chik_alto_estavel <- shape_chik %>% filter(status == "Alto estavel") %>% pull() %>% length()
+
+n_regionais_incidencia_chik_alto_em_queda <- shape_chik %>% filter(status == "Alto em queda") %>% pull() %>% length()
+
+n_regionais_incidencia_chik_baixo <- shape_chik %>% filter(status == "Baixo ou moderado") %>% pull() %>% length()
 ```
 
-Do total de 450 regionais, `r n_regionais_alta_incidencia_chik` estão indicando alta incidência de suspeição de dengue e `r n_regionais_alta_incidencia_chik` de chikungunya (Figura 5). No Amazonas, na região do Alto Juruá e Triângulo esse indicador aponta aumento. No nordeste, observa-se a $9^a$ região de saúde no Alagoas, $9^a$ na Paraíba, Baturité no CE. No sudeste, Mananciais em SP.
+De acordo com a figura 6, do total de 450 regionais, `r n_regionais_incidencia_chik_alto_em_subida` estão com alta incidência e continuam subindo, `r n_regionais_incidencia_chik_alto_estavel` estão com alta, porém estável, `r n_regionais_incidencia_chik_alto_em_queda` estão com alta, mas em queda e `r n_regionais_incidencia_chik_baixo` estão com baixa ou moderada incidência de chikungunya
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 14}
 gg_map_risco_classif_chik
 ```
-
-**Figura 6.** Regionais de saúde que a incidência de chikungunya esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
+**Figura 7.** Regionais de saúde que a incidência de chikungunya esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
 
 <!-- Adicionar tabela com as principais mudancas  -->
-Durante a última quinzena, algumas regionais (estados?) apresentaram mudanças nos padrões de notificação. Segue um panorama geral das principais mudanças: 
+<!-- Durante a última quinzena, algumas regionais (estados?) apresentaram mudanças nos padrões de notificação. Segue um panorama geral das principais mudanças:  -->
 
-\newpage
-\textbf{OBSERVAÇÕES SOBRE A METODOLOGIA}
+<!-- \newpage -->
+<!-- \textbf{OBSERVAÇÕES SOBRE A METODOLOGIA} -->
 
-A atualização dos dados pode resultar em mudanças nas estimativas. Para detalhes sobre as metodologias, consultar o site do Infodengue e as referências citadas ao fim do documento. 
+<!-- A atualização dos dados pode resultar em mudanças nas estimativas. Para detalhes sobre as metodologias, consultar o site do Infodengue e as referências citadas ao fim do documento.  -->
 
 \vspace{2cm}
 \textbf{AUTORES}
