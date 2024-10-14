@@ -27,13 +27,15 @@ obter_siglas_codigos <- function(df, merge_by = "codigo"){
 }
 
 obter_metricas_nacionais <- function(df){
+  
   result <- df %>%
-    group_by(SE) %>%
+    group_by(arbovirose, SE) %>%
     summarise(
       casos = sum(casos),
       casos_est = sum(casos_est),
       pop = sum(pop)
     ) %>%
+    ungroup() %>% 
     mutate(
       inc = casos / pop * 100000,
       incest = casos_est/pop * 100000
@@ -44,6 +46,7 @@ obter_metricas_nacionais <- function(df){
 }
 
 obter_metricas_estaduais <- function(df){
+  
   result <- df %>%
     mutate(codigo = floor(municipio_geocodigo/100000)) %>%
     group_by(codigo, SE) %>%
@@ -52,16 +55,26 @@ obter_metricas_estaduais <- function(df){
       casos_est = sum(casos_est),
       pop = sum(pop)
     ) %>%
+    ungroup() %>% 
     mutate(
       inc = casos / pop * 100000,
       incest = casos_est/pop * 100000
     ) %>%
-    arrange(codigo, SE)
+    arrange(codigo, SE) #%>% 
+  # group_by(codigo) %>% 
+  # mutate(
+  #   rt_1 = ifelse(lag(casos) > 0, casos/lag(casos), 0),
+  #   rt_1_est = ifelse(lag(casos_est) > 0, casos_est/lag(casos_est), 0),
+  #   rt_1 = ifelse(is.na(rt_1), 0, rt_1),
+  #   rt_1_est = ifelse(is.na(rt_1_est), 0, rt_1_est)
+  # ) %>% 
+  # ungroup()
   
   return(result)
 }
 
 obter_metricas_estaduais_por_ano <- function(df){
+  
   result <- df %>%
     mutate(
       codigo = floor(municipio_geocodigo/100000),
@@ -82,6 +95,7 @@ obter_metricas_estaduais_por_ano <- function(df){
 }
 
 obter_metricas_macrorregionais_por_semana <- function(df){
+  
   result <- df %>% 
     mutate(
       codigo = floor(municipio_geocodigo/100000),
@@ -106,6 +120,7 @@ obter_metricas_macrorregionais_por_semana <- function(df){
 }
 
 obter_metricas_regionais_por_semana <- function(df){
+  
   result <- df %>% 
     mutate(
       codigo = floor(municipio_geocodigo/100000),
@@ -130,7 +145,7 @@ obter_metricas_regionais_por_semana <- function(df){
 obter_tabela <- function(df, df_mem, se_max){
   
   # df = df_dengue
-  # df_mem = memUFanual 
+  # df_mem = memUFanual
   # se_max = se_max_dengue
   
   df_total = df %>% obter_metricas_estaduais_por_ano()
@@ -165,19 +180,33 @@ obter_tabela <- function(df, df_mem, se_max){
     )
   # sum(tabela_UF$nivel)  # numero de UFs acima do limiar epidemico
   
-  
-  for(i in 1:length(tabela_UF$estado)){
-    df2 <- obj_df[obj_df$codigo == tabela_UF$codigo[i], ] %>%
+  # i = 11
+  for(i in unique(tabela_UF$codigo)){
+    
+    pos = grep(i, tabela_UF$codigo)
+    
+    df2 <- obj_df %>% 
+      filter(codigo == i) %>%
       arrange(SE)
-    df2 <- df2[df2$SE > 202400, ]
-    semanas <- df2$SE[df2$incest > tabela_UF$veryhigh[i]]
-    tabela_UF$selimiaralto[i] <- ifelse(length(semanas) == 0, NA, min(semanas))
-    r <- Rt(obj_df[obj_df$codigo == tabela_UF$codigo[i],], count = "casos_est", 
+    
+    df2 <- df2 %>% filter(SE > 202400)
+    semanas <- df2 %>% 
+      filter(incest > tabela_UF %>% 
+               filter(codigo == i) %>%
+               pull(veryhigh)
+      ) %>%
+      pull(SE)
+    
+    tabela_UF$selimiaralto[pos] <- ifelse(length(semanas) == 0, NA, min(semanas))
+    
+    r <- Rt(obj_df[obj_df$codigo == tabela_UF$codigo[pos],], count = "casos_est", 
             gtdist = "normal", meangt = 3, sdgt = 1)
-    tabela_UF$Rtmean[i] <- mean(tail(r$Rt, n = 3))
-    tabela_UF$secomp1[i] <- sum(tail(r$lwr, n = 3) > 1)
-    df2 <- df_estaduais %>% filter(codigo == tabela_UF$codigo[i])
-    tabela_UF$weekmax[i] <-  df_estaduais$SE[which.max(df2$casos_est)]
+    
+    tabela_UF$Rtmean[pos] <- mean(tail(r$Rt, n = 3))
+    tabela_UF$secomp1[pos] <- sum(tail(r$lwr, n = 3) > 1)
+    
+    df2 <- df_estaduais %>% filter(codigo == tabela_UF$codigo[pos])
+    tabela_UF$weekmax[pos] <-  df_estaduais$SE[which.max(df2$casos_est)]
   }
   
   return(tabela_UF)
@@ -185,6 +214,7 @@ obter_tabela <- function(df, df_mem, se_max){
 }
 
 obter_pop_sob_risco <- function(df){
+  
   df_result <- df %>% 
     group_by(sigla) %>% 
     summarise(
@@ -283,7 +313,7 @@ gg_bar_pop_risco <- function(df, por_regiao = T){
   
 }
 
-gg_map_risco_classif <- function(shape){
+obter_mapa_risco_classif <- function(shape){
   
   g_map <- shape %>% 
     ggplot() +
@@ -292,74 +322,111 @@ gg_map_risco_classif <- function(shape){
       values = c("#c93232", "#f2bd35", "yellow2","#acdb69", "#fefefe"),
       drop = FALSE) +
     labs(fill = "Rt <= 1") +
-    theme_minimal() 
-  
-  return(g_map)
-}
-
-gg_timeline_dots <- function(df){
-  df <- df_dengue_chik_estados 
-  g_chart <- df %>% 
-    mutate(
-      ano = as.numeric(ano),
-      data = ifelse(ano ==  max(ano), max(ano), paste0(min(ano),"-",max(ano)-1)),
-      ano = as.factor(ano)
-    ) %>% 
-    ggplot(aes(x = reorder(sigla, inc_acumulada, max), y = inc_acumulada)) +
-    geom_point(aes(color = data), size =  4) + 
-    scale_color_manual(values = c('grey70', 'red'))+
+    theme_minimal() +
     theme(
       panel.background = element_blank(),
       panel.grid.major.y  = element_line(linetype = "dotted",color = "grey", linewidth = 0.5),
-      legend.text = element_text(size = 16),
-      legend.title = element_text(size = 16,hjust = 0.5),
-      legend.position = "bottom",
+      plot.title = element_text(size = 20),
+      legend.text = element_text(size = 18),
+      legend.title = element_text(size = 18, hjust = 0.5),
+      legend.position = "top",
       axis.title.y = element_text(size = 16),
       axis.title.x = element_text(size = 16),
       axis.text.y = element_text(size = 12),
       axis.text.x = element_text(size = 12),
       strip.text.x = element_text(size = 18, colour = "black"), 
       strip.background = element_rect(fill = "white")
+    )
+  
+  return(g_map)
+}
+
+gg_timeline_dots <- function(df, se_max = se_max){
+  
+  order <- df %>% 
+    arrange(desc(inc)) %>% 
+    distinct(sigla) %>% pull()
+  
+  df <- df %>% 
+    mutate(sigla = factor(sigla, levels = order))
+  
+  g_chart <- ggplot() +
+    geom_point(
+      data = df %>% 
+        filter(grupo == levels(df$grupo)[1]),
+      color = 'grey70', size = 4,
+      aes(x = sigla, y = inc), show.legend = T
+    ) + 
+    geom_point(
+      data = df %>% 
+        filter(grupo == levels(df$grupo)[2]),
+      color = 'red', size = 3,
+      aes(x = sigla, y = inc), show.legend = T
+    ) + 
+    geom_point(
+      data = df %>% 
+        filter(grupo == levels(df$grupo)[3]),
+      color = 'orange', size = 2,
+      aes(x = sigla, y = inc), show.legend = T
+    ) + 
+    theme(
+      panel.background = element_blank(),
+      panel.grid.major.y  = element_line(linetype = "dotted",color = "grey", linewidth = 0.5),
+      legend.text = element_text(size = 12),
+      legend.title = element_text(size = 12,hjust = 0.5),
+      legend.position = "bottom",
+      axis.title.y = element_text(size = 12),
+      axis.title.x = element_text(12),
+      axis.text.y = element_text(size = 12),
+      axis.text.x = element_text(size = 12),
+      strip.text.x = element_text(size = 16, colour = "black"), 
+      strip.background = element_rect(fill = "white")
     ) +
     labs(title = "",
          y = "Incidência por 100 mil habitantes",
          x = "",
-         color = "") +
-    facet_wrap(~arbovirose, ncol = 1, scales = "free")
+         color = "")
   
   return(g_chart)
 }
 
 gg_inc_dengue_chikv <- function(df){
-  df <- df_inc_dengue_chik
   
   df %>% 
     ggplot() + 
     geom_bar(stat = "identity", aes(x = data, y = inc,fill = "Casos"))+
     geom_line(aes(x = data, y = inc_est, colour =  "Estimativa Corrigida")) +
-    scale_x_continuous(
-      breaks = c(min(df$data), min(df$data) + 21 ,min(df$data) + 42, min(df$data) + 63,max(df$data)), 
-      labels = c(paste0(str_sub(unique(df$SE)[1], start  = -2L),"/",str_sub(unique(df$SE)[1], start  = 3L, end  = 4L)),
-                 paste0(str_sub(unique(df$SE)[4], start  = -2L),"/",str_sub(unique(df$SE)[4], start  = 3L, end  = 4L)),
-                 paste0(str_sub(unique(df$SE)[7], start  = -2L),"/",str_sub(unique(df$SE)[7], start  = 3L, end  = 4L)),
-                 paste0(str_sub(unique(df$SE)[10], start  = -2L),"/",str_sub(unique(df$SE)[10], start  = 3L, end  = 4L)),
-                 paste0(str_sub(unique(df$SE)[13], start  = -2L),"/",str_sub(unique(df$SE)[13], start  = 3L, end  = 4L)))
+    scale_x_date(
+      breaks = "1 month",
+      minor_breaks = "1 week",
+      date_labels = "%b\n%Y"
     ) +
     scale_fill_manual(values = "lightblue") +
     scale_colour_manual(values = "darkblue") +
     theme_light() +
     theme(
       legend.title = element_blank(), legend.position = "bottom",
-      legend.text = element_text(size = 14),
+      legend.text = element_text(size = 12),
       axis.title = element_text(size = 18),
       axis.text.y = element_text(size = 12),
       axis.text.x = element_text(size = 12),
-      strip.text.x = element_text(size = 14, colour = "black"), strip.background = element_rect(fill = "white")
+      strip.text.x = element_text(size = 14, colour = "black"),
+      strip.background = element_rect(fill = "white")
     ) +
     labs(
       x = "SE/Ano",
       y = "Incidência (dengue + chikungunya) por 100 mil hab.") +
     facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y")
+}
+
+add_arrows <- function(x){
+  icon = ifelse(
+    x > 0, "up", #&#129093 arrow-up
+    ifelse(x < 0, 
+           "down", #&#129095 arrow-down
+           "right") #&#129094 
+  )
+  return(icon)
 }
 
 verificar_tendencia_regressao <- function(df) {
@@ -373,13 +440,15 @@ verificar_tendencia_regressao <- function(df) {
     
     coef_angular <- coef(modelo)[2]
     
-    if (coef_angular > 0) {
-      return("Crescente")
-    } else if (coef_angular < 0) {
-      return("Decrescente")
-    } else {
-      return("Estável")
-    }
+    return(add_arrows(coef_angular))
+    
+    # if (coef_angular > 0) {
+    #   return("Crescente")
+    # } else if (coef_angular < 0) {
+    #   return("Decrescente")
+    # } else {
+    #   return("Estável")
+    # }
   }
   
   df$tendencia <- apply(df[ , 2:ncol(df)], 1, calcular_tendencia)
@@ -421,6 +490,10 @@ construir_tabela_incidencia_por_semana <- function(df, var = "inc"){
 
 gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
   
+  # df <- tabela_tendencia_por_uf_inc_observada_chik %>% 
+  #   bind_cols(tabela_tendencia_por_uf_inc_estimada_chik %>% 
+  #               dplyr::select(-c(regiao, sigla)))
+  
   df <- df %>% 
     janitor::clean_names() %>% 
     tibble()
@@ -428,13 +501,12 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
   semana_labels <- colnames(df)[3:6]
   semana_labels <- substr(semana_labels, 6, 7)
   
-  colnames(df) <- c("Regiao", "Sigla", 
+  colnames(df) <- c("Regiao", "UF", 
                     "S1_A", "S2_A", "S3_A", "S4_A", "tendencia_A", 
                     "S1_B", "S2_B", "S3_B", "S4_B", "tendencia_B")
   
   tabela <- df %>% 
-    gt(groupname_col = "Regiao") %>% 
-    tab_options(table.font.size = 11) %>% 
+    gt(groupname_col = "Regiao") %>% #, row_group_as_column = TRUE
     data_color(
       columns = 3:6,
       colors = scales::col_numeric(alpha = T,
@@ -451,17 +523,17 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
     ) %>% 
     cols_label(
       Regiao = "Região",
-      Sigla = "Sigla",
+      UF = "UF",
       S1_A = semana_labels[1],
       S2_A = semana_labels[2],
       S3_A = semana_labels[3], 
       S4_A = semana_labels[4],
-      tendencia_A = "Tendência",
+      tendencia_A = "",
       S1_B = semana_labels[1],
       S2_B = semana_labels[2],
       S3_B = semana_labels[3], 
       S4_B = semana_labels[4],
-      tendencia_B = "Tendência"
+      tendencia_B = ""
     ) %>%
     tab_style(
       style = cell_text(weight = "bold"),
@@ -473,52 +545,20 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
     ) %>% 
     fmt_number(
       columns = c(3:6, 8:11),
-      decimals = 2
+      decimals = 1
     ) %>% 
     cols_align(align = "center") %>% 
     tab_spanner(columns = 3:6, md("**Incidência observada**")) %>% 
     tab_spanner(columns = 8:11, md("**Incidência estimada**")) %>% 
-    tab_style(
-      style = cell_text(weight = "bold", color = "darkgreen"),
-      locations = cells_body(
-        columns = "tendencia_A", 
-        rows = tendencia_A == "Decrescente"
-      )
-    ) %>%
-    tab_style(
-      style = cell_text(weight = "bold", color = "red"),
-      locations = cells_body(
-        columns = "tendencia_A", 
-        rows = tendencia_A == "Crescente"
-      )
-    ) %>%
-    tab_style(
-      style = cell_text(weight = "bold", color = "black"),
-      locations = cells_body(
-        columns = "tendencia_A", 
-        rows = tendencia_A == "Estável"
-      )
-    ) %>% 
-    tab_style(
-      style = cell_text(weight = "bold", color = "darkgreen"),
-      locations = cells_body(
-        columns = "tendencia_B", 
-        rows = tendencia_B == "Decrescente"
-      )
-    ) %>%
-    tab_style(
-      style = cell_text(weight = "bold", color = "red"),
-      locations = cells_body(
-        columns = "tendencia_B", 
-        rows = tendencia_B == "Crescente"
-      )
-    ) %>%
-    tab_style(
-      style = cell_text(weight = "bold", color = "black"),
-      locations = cells_body(
-        columns = "tendencia_B", 
-        rows = tendencia_B == "Estável"
-      )
+    text_transform(
+      locations = cells_body(columns = c(7, 12)), 
+      fn = function(x) {
+        dplyr::case_when(
+          x == "up" ~ md("{\\color{dark_red} \\uparrow}"),   # Seta para cima (vermelho)
+          x == "down" ~ md("{\\color{dark_green} \\downarrow}"), # Seta para baixo (verde)
+          x == "right" ~ md("{\\color{dark_blue} \\rightarrow}")  # Seta para a direita (dourado)
+        )
+      }
     )
   
   return(tabela)
@@ -551,4 +591,67 @@ gerar_grafico_inc <- function(df){
     )
   
   return(chart)
+}
+
+get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem){
+  
+  df_mem_uf_sazonal <- df_uf_mem %>% 
+    rename(semana = SE) %>% 
+    dplyr::select(sigla, semana, SEe, preseason, epidemic, posseason)
+  
+  df_uf_ano_anterior <- df_uf_inc %>%
+    filter(ano == max(ano, na.rm = T) - 1) %>% 
+    dplyr::select(codigo, semana, inc, incest) %>% 
+    set_names(c("codigo", "semana", "inc_ano_anterior", "inc_est_ano_anterior")) %>% 
+    mutate(id = paste(codigo, semana, sep = "_"))
+  
+  df_uf_ano_atual <- df_uf_inc %>%
+    filter(ano == max(ano, na.rm = T)) %>% 
+    dplyr::select(codigo, semana, inc, incest) %>% 
+    set_names(c("codigo", "semana", "inc_ano_atual", "inc_est_ano_atual")) %>% 
+    mutate(id = paste(codigo, semana, sep = "_")) %>% 
+    dplyr::select(-c(codigo, semana))
+  
+  df_uf <- df_uf_ano_anterior %>% 
+    left_join(df_uf_ano_atual, by = "id") %>% 
+    mutate(codigo = as.character(codigo)) %>% 
+    obter_siglas_codigos(merge_by = "codigo")
+  
+  g_map <- df_uf %>% 
+    ggplot(aes(x = semana)) + 
+    geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = posseason), fill = 'orange', alpha = 0.5) + 
+    geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'yellow', alpha = 0.5) + 
+    geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'gray', alpha = 0.5) +
+    geom_line(aes(y = inc_ano_anterior), color = "blue", show.legend = T) +
+    geom_line(aes(y = inc_ano_atual), color = "red", show.legend = T) +
+    theme_minimal() +
+    labs(title = "Brasil", y = "Incidence", x = "SE") +
+    facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y") 
+  
+  return(g_map)
+  
+}
+
+## Textos
+texto_1 <- function(df, arbovirose){
+  if(length(df) == 0){
+    texto <- paste0("Nota-se que nenhuma UF esta apresentando a máxima incidência de ",arbovirose," nestao ano.")
+  }else{
+    df = paste(df,collapse=", ")
+    
+    n_char_texto <- nchar(df) > 2
+    
+    if(n_char_texto == T){
+      texto <- paste0(
+        "As UFs ",
+        substr(df, 1, nchar(df)-4),
+        " e ",
+        substr(df, nchar(df)-1, nchar(df)), " estão apresentando incidência máxima de ",arbovirose," nesta atual semana epidemiológica."
+      )
+    }else{
+      texto <- paste0(df, " esta apresentando incidência máxima de ", arbovirose," nesta atual semana epidemiológica.")
+    }
+    
+  }
+  return(texto)
 }
