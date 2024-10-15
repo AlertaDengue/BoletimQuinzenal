@@ -146,12 +146,13 @@ memReganual <- memReganual %>%
   ) %>%
   obter_siglas_codigos(merge_by = "codigo")
 
-memUFsazonal <- memUFsazonal %>%
-  rename(
-    codigo = uf) %>%
+memUFsazonal <- memUFsazonal %>% 
   mutate(
-    codigo = as.character(codigo)
-  ) %>%
+    SEe = as.numeric(SE) + 40,
+    SEe = ifelse(SEe > 52, SEe - 52, SEe)
+  ) %>% 
+  rename(codigo = uf) %>%
+  mutate(codigo = as.character(codigo)) %>%
   obter_siglas_codigos(merge_by = "codigo")
 
 ## Chikv
@@ -171,11 +172,12 @@ memReganual.chi <- memReganual.chi %>%
   obter_siglas_codigos(merge_by = "codigo")
 
 memUFsazonal.chi <- memUFsazonal.chi %>%
-  rename(
-    codigo = uf) %>%
-  mutate(
-    codigo = as.character(codigo)
-  ) %>%
+    mutate(
+    SEe = as.numeric(SE) + 40,
+    SEe = ifelse(SEe > 52, SEe - 52, SEe)
+  ) %>% 
+  rename(codigo = uf) %>%
+  mutate(codigo = as.character(codigo)) %>%
   obter_siglas_codigos(merge_by = "codigo")
 ```
 
@@ -465,10 +467,14 @@ Do total de casos notificados, `r prettyNum(total_casos_provaveis_ano_selecionad
 \newpage
 **Curvas de incidência e limiares epidemicos para dengue**
 
+A figura 1 estão apresentada as curvas de incidências de dengue e seus limiares epidêmicos por unidade da federação. A curva em \textcolor{red}{\textbf{vermelho}} indica a incidência estimada no ano atual até a semana `r ultima_semana_dengue` enquanto a tracejada em \textcolor{dark_red}{\textbf{vermelho escuro}} a incidência observada. A curva em \textcolor{blue}{\textbf{azul}} exibe os valores observados em 2023. A linha tracejada em **preto** indica o limiar de incidência muito alta.
+
 ```{r, fig.align="center", fig.width = 12, fig.height = 14}
 get_map_mem_incidencia(
   df_uf_inc = df_dengue_uf,
-  df_uf_mem = memUFsazonal
+  df_uf_mem = memUFsazonal,
+  df_limiar_mem = memUFanual,
+  max_se = ultima_semana_dengue
 )
 ```
 **Figura 1.** Curvas de incidência e limiares epidemicos para dengue até a semana epidemiológica `r ultima_semana_dengue`.
@@ -476,18 +482,22 @@ get_map_mem_incidencia(
 \newpage
 **Curvas de incidência e limiares epidemicos para chikungunya**
 
+Na figura 2 são exibidas as curvas de incidências de chikungunya e seus limiares epidêmicos por unidade da federação. A curva em \textcolor{red}{\textbf{vermelho}} indica a incidência estimada no ano atual até a semana `r ultima_semana_dengue` enquanto a tracejada em \textcolor{dark_red}{\textbf{vermelho escuro}} a incidência observada. A curva em \textcolor{blue}{\textbf{azul}} exibe os valores observados em 2023. A linha tracejada em **preto** indica o limiar de incidência muito alta.
+
 ```{r, fig.align="center", fig.width = 12, fig.height = 14}
 get_map_mem_incidencia(
   df_uf_inc = df_chik_uf,
-  df_uf_mem = memUFsazonal.chi
+  df_uf_mem = memUFsazonal.chi,
+  df_limiar_mem = memUFanual.chi,
+  max_se = ultima_semana_chik
 )
 ```
 **Figura 2.** Curvas de incidência e limiares epidemicos para chikungunya até a semana epidemiológica `r ultima_semana_chik`.
 
 \newpage
-**Casos Acumulados por Estados**
+**Picos de incidências por Estados**
 
-Na figura 3 e 4 estão representadas as incidências máximas anuais de dengue e chikungunya, por unidade da federação. Os pontos cinzas indicam os valores para os anos anteriores (2010 a 2023), o ponto vermelho indica a incidência máxima em 2024 e o ponto laranja a incidência na semana `r ultima_semana_dengue`.
+Na figura 3 e 4 estão representadas os picos das incidências anuais de dengue e chikungunya, por unidade da federação. Os pontos \textcolor{gray}{\textbf{cinzas}} indicam os picos para os anos anteriores (2010 a 2023), o ponto \textcolor{red}{\textbf{vermelho}} indica o pico em 2024 e o ponto \textcolor{orange}{\textbf{laranja}} a incidência na semana `r ultima_semana_dengue`.
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 9}
 df_dengue_chik_estados <- df_dengue_chik %>% 
@@ -580,7 +590,7 @@ df_dengue_chik_estados %>%
   filter(arbovirose == "Dengue") %>% 
   gg_timeline_dots()
 ```
-**Figura 3.** Incidência acumulada por 100 mil habitantes sobre os casos notificados de dengue até a semana `r ultima_semana_dengue`.
+**Figura 3.** Pico da incidência por 100 mil habitantes sobre os casos notificados de dengue até a semana `r ultima_semana_dengue`.
 
 ```{r}
 chik_semana_epidemica_estados <- semana_epidemica_dengue_chik_estados %>% 
@@ -598,7 +608,7 @@ df_dengue_chik_estados %>%
   filter(arbovirose == "Chikungunya") %>% 
   gg_timeline_dots()
 ```
-**Figura 4.** Incidência acumulada por 100 mil habitantes sobre os casos notificados de chikungunya até a semana `r ultima_semana_dengue`.
+**Figura 4.** Pico da incidência por 100 mil habitantes sobre os casos notificados de chikungunya até a semana `r ultima_semana_dengue`.
 
 <!-- \newpage -->
 <!-- As curvas de casos semanais de dengue e chikungunya são apresentadas na figura 2. Observa-se que está (dentro/fora) do previsto. -->
@@ -607,42 +617,6 @@ df_dengue_chik_estados %>%
 <!-- **Adicionar figura 3** -->
 <!-- \newline -->
 <!-- **Figura 3.** Curvas de previsão de casos semanais no Brasil para Dengue e Chikungunya   -->
-
-\newpage
-As curvas de incidência dos casos notificados e os casos estimados de acordo com o nowcast, por estado, são apresentadas na figura 5. Observa-se uma uma tendência geral de queda nas taxas de incidência em todos os estados ao longo do tempo, com diferenças no nível inicial e na taxa de queda entre os estados.
-
-
-```{r, fig.align="center", fig.width = 12, fig.height = 14}
-df_inc_dengue_chik <- df_dengue %>% 
-  dplyr::select(SE, municipio_geocodigo, casos, casos_est, pop) %>%
-  bind_rows(
-    df_chik %>% 
-      dplyr::select(SE, municipio_geocodigo, casos, casos_est, pop)
-  ) %>% 
-  mutate(
-    codigo = substr(municipio_geocodigo, 1, 2),
-    codigo = as.character(codigo)
-  ) %>% 
-  dplyr::select(SE, codigo, casos, casos_est, pop) %>%
-  filter(SE >=  unique(SE)[length(unique(SE))-12]) %>%
-  group_by(SE, codigo) %>%
-  reframe(
-    casos = sum(casos, na.rm = T),
-    casos_est = sum(casos_est, na.rm = T),
-    pop = sum(unique(pop))
-  ) %>%
-  mutate(
-    inc = casos/pop * 100000,
-    inc_est = casos_est/pop * 100000,
-    data = SE2date(SE)$ini
-  ) %>% 
-  obter_siglas_codigos()
-df_inc_dengue_chik$estado <- stringi::stri_unescape_unicode(df_inc_dengue_chik$estado)
-
-df_inc_dengue_chik %>% 
-  gg_inc_dengue_chikv()
-```
-**Figura 5.** Incidência de casos notificados de arboviroses (chikungunya + dengue) nas Unidades da Federação.
 
 \newpage
 **Panorama da tendência dos novos casos de dengue até a semana `r ultima_semana_dengue`**
@@ -691,9 +665,9 @@ tab_tendencia_por_uf_inc_observada_dengue
 ```
 
 \newpage
-**Panorama da tendência dos novos casos de chikungunya até a semana `r ultima_semana_dengue`**
+**Panorama da tendência dos novos casos de chikungunya até a semana `r ultima_semana_chik`**
 
-A tabela 3 apresenta um panorama sobre a tendência da incidência de dengue para casos notificados e estimados em todo o país até a semana `r ultima_semana_dengue`. A **tendência** indica se os casos estão crescendo ou decrescendo significativamente.
+A tabela 3 apresenta um panorama sobre a tendência da incidência de dengue para casos notificados e estimados em todo o país até a semana `r ultima_semana_chik`. As **setas** indicam se os casos estão crescendo ou decrescendo significativamente.
 
 **Tabela 3.** Situação dos estados em relação à notificação dos casos de chikungunya em 2024.
 ```{r}
@@ -735,7 +709,7 @@ tab_tendencia_por_uf_inc_observada_chik
 ```
 
 \newpage
-\textbf{Estados/Regionais com aumento de Casos de dengue}
+\textbf{Estados/Regionais com aumento de casos de dengue}
 
 ```{r, include = FALSE}
 n_regionais_incidencia_dengue_alto_em_subida <- shape_dengue %>% filter(status == "Alto em subida") %>% pull() %>% length()
@@ -747,12 +721,12 @@ n_regionais_incidencia_dengue_alto_em_queda <- shape_dengue %>% filter(status ==
 n_regionais_incidencia_dengue_baixo <- shape_dengue %>% filter(status == "Baixo ou moderado") %>% pull() %>% length()
 ```
 
-De acordo com a figura 6, do total de 450 regionais, `r n_regionais_incidencia_dengue_alto_em_subida` estão com alta incidência e continuam subindo, `r n_regionais_incidencia_dengue_alto_estavel` estão com alta, porém estável, `r n_regionais_incidencia_dengue_alto_em_queda` estão com alta, mas em queda e `r n_regionais_incidencia_dengue_baixo` estão com baixa ou moderada incidência de dengue.
+De acordo com a figura 5, do total de 450 regionais, `r n_regionais_incidencia_dengue_alto_em_subida` estão com alta incidência e continuam subindo, `r n_regionais_incidencia_dengue_alto_estavel` estão com alta, porém estável, `r n_regionais_incidencia_dengue_alto_em_queda` estão com alta, mas em queda e `r n_regionais_incidencia_dengue_baixo` estão com baixa ou moderada incidência de dengue.
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 14}
 gg_map_risco_classif_dengue
 ```
-**Figura 6.** Regionais de saúde que a incidência de dengue esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
+**Figura 5.** Regionais de saúde que a incidência de dengue esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
 
 \newpage
 \textbf{Estados/Regionais com aumento de casos de chikungunya}
@@ -767,12 +741,12 @@ n_regionais_incidencia_chik_alto_em_queda <- shape_chik %>% filter(status == "Al
 n_regionais_incidencia_chik_baixo <- shape_chik %>% filter(status == "Baixo ou moderado") %>% pull() %>% length()
 ```
 
-De acordo com a figura 6, do total de 450 regionais, `r n_regionais_incidencia_chik_alto_em_subida` estão com alta incidência e continuam subindo, `r n_regionais_incidencia_chik_alto_estavel` estão com alta, porém estável, `r n_regionais_incidencia_chik_alto_em_queda` estão com alta, mas em queda e `r n_regionais_incidencia_chik_baixo` estão com baixa ou moderada incidência de chikungunya
+Conforme a figura 6, do total de 450 regionais, `r n_regionais_incidencia_chik_alto_em_subida` estão com alta incidência e continuam subindo, `r n_regionais_incidencia_chik_alto_estavel` estão com alta, porém estável, `r n_regionais_incidencia_chik_alto_em_queda` estão com alta, mas em queda e `r n_regionais_incidencia_chik_baixo` estão com baixa ou moderada incidência de chikungunya
 
 ```{r, fig.align="center", fig.width = 12, fig.height = 14}
 gg_map_risco_classif_chik
 ```
-**Figura 7.** Regionais de saúde que a incidência de chikungunya esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
+**Figura 6.** Regionais de saúde que a incidência de chikungunya esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
 
 <!-- Adicionar tabela com as principais mudancas  -->
 <!-- Durante a última quinzena, algumas regionais (estados?) apresentaram mudanças nos padrões de notificação. Segue um panorama geral das principais mudanças:  -->

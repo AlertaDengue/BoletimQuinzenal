@@ -594,37 +594,66 @@ gerar_grafico_inc <- function(df){
   return(chart)
 }
 
-get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem){
+get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se = 52){
   
+  # df_uf_inc = df_dengue_uf
+  # df_uf_mem = memUFsazonal
+  # df_limiar_mem = memUFanual
+  max_se = as.numeric(max_se)
+
   df_mem_uf_sazonal <- df_uf_mem %>% 
-    rename(semana = SE) %>% 
-    dplyr::select(sigla, semana, SEe, preseason, epidemic, posseason)
+    rename(semana = SEe) %>% 
+    dplyr::select(sigla, semana, preseason, epidemic, posseason) %>% 
+    filter(semana >= (max_se - 10) & semana <= (max_se + 5))
   
   df_uf_ano_anterior <- df_uf_inc %>%
     filter(ano == max(ano, na.rm = T) - 1) %>% 
     dplyr::select(codigo, semana, inc, incest) %>% 
     set_names(c("codigo", "semana", "inc_ano_anterior", "inc_est_ano_anterior")) %>% 
-    mutate(id = paste(codigo, semana, sep = "_"))
+    mutate(
+      semana = as.numeric(semana),
+      id = paste(codigo, semana, sep = "_")
+    ) %>% 
+    filter(semana >= (max_se - 10) & semana <= (max_se + 5)) 
   
   df_uf_ano_atual <- df_uf_inc %>%
     filter(ano == max(ano, na.rm = T)) %>% 
     dplyr::select(codigo, semana, inc, incest) %>% 
     set_names(c("codigo", "semana", "inc_ano_atual", "inc_est_ano_atual")) %>% 
-    mutate(id = paste(codigo, semana, sep = "_")) %>% 
+    mutate(
+      semana = as.numeric(semana),
+      id = paste(codigo, semana, sep = "_")
+    ) %>% 
+    filter(semana >= (max_se - 10) & semana <= (max_se + 5)) %>% 
     dplyr::select(-c(codigo, semana))
   
   df_uf <- df_uf_ano_anterior %>% 
     left_join(df_uf_ano_atual, by = "id") %>% 
-    mutate(codigo = as.character(codigo)) %>% 
-    obter_siglas_codigos(merge_by = "codigo")
+    mutate(
+      codigo = as.character(codigo),
+      semana = as.numeric(semana)
+    ) %>% 
+    obter_siglas_codigos(merge_by = "codigo") %>% 
+    left_join(df_limiar_mem %>% 
+                dplyr::select(codigo, veryhigh), by = "codigo") %>% 
+    group_by(sigla) %>% 
+    mutate(
+      veryhigh = ifelse(
+        veryhigh > 2 * max(inc_est_ano_anterior, na.rm = T) |
+          veryhigh > 2 * max(inc_est_ano_atual, na.rm = T), NA, veryhigh            
+                          )
+    )
   
   g_map <- df_uf %>% 
     ggplot(aes(x = semana)) + 
+    geom_hline(aes(yintercept = veryhigh), color = "black", linewidth = 1, linetype = "dashed")  +
     geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = posseason), fill = 'orange', alpha = 0.5) + 
     geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'yellow', alpha = 0.5) + 
     geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'gray', alpha = 0.5) +
-    geom_line(aes(y = inc_ano_anterior), color = "blue", show.legend = T) +
-    geom_line(aes(y = inc_ano_atual), color = "red", show.legend = T) +
+    geom_line(aes(y = inc_est_ano_anterior), linewidth = 0.75, color = "blue", show.legend = T) +
+    # geom_line(aes(y = inc_ano_anterior), linetype = "dashed", linewidth = 0.5, color = "darkblue", show.legend = T) +
+    geom_line(aes(y = inc_est_ano_atual), linewidth = 0.75, color = "red", show.legend = T) +
+    geom_line(aes(y = inc_ano_atual), linetype = "dashed", linewidth = 0.5, color = "darkred", show.legend = T) +
     theme_light() +
     theme(
       legend.title = element_blank(), 
