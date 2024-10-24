@@ -600,7 +600,7 @@ get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se =
   # df_uf_mem = memUFsazonal
   # df_limiar_mem = memUFanual
   max_se = as.numeric(max_se)
-
+  
   df_mem_uf_sazonal <- df_uf_mem %>% 
     rename(semana = SEe) %>% 
     dplyr::select(sigla, semana, preseason, epidemic, posseason) %>% 
@@ -640,8 +640,8 @@ get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se =
     mutate(
       veryhigh = ifelse(
         veryhigh > 2 * max(inc_est_ano_anterior, na.rm = T) |
-          veryhigh > 2 * max(inc_est_ano_atual, na.rm = T), NA, veryhigh            
-                          )
+          veryhigh > 2 * max(inc_est_ano_atual, na.rm = T), NA_real_, veryhigh            
+      )
     )
   
   g_map <- df_uf %>% 
@@ -669,6 +669,113 @@ get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se =
     facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y") 
   
   return(g_map)
+  
+}
+
+get_map_mem_incidencia_br <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se = 52){
+  
+  # df_uf_inc = df_chik_nacional
+  # df_uf_mem = memBR_dengue_chik %>% filter(arbovirose == "Chikungunya")
+  # df_limiar_mem = thresholds.tab
+  # max_se = ultima_semana_chik
+  max_se = as.numeric(max_se)
+  
+  df_mem_uf_sazonal <- df_uf_mem %>% 
+    rename(semana = SEe) %>% 
+    dplyr::select(semana, preseason, epidemic, posseason) 
+  
+  df_uf_ano_anterior <- df_uf_inc %>%
+    mutate(
+      ano = substr(SE, 1, 4),
+      ano = as.numeric(ano),
+      semana = substr(SE, 5, 6),
+      semana = as.numeric(semana)
+    ) %>% 
+    filter(ano == (max(ano, na.rm = T) - 1)) %>% 
+    dplyr::select(semana, inc, incest) %>% 
+    set_names(c("semana", "inc_ano_anterior", "inc_est_ano_anterior"))
+  
+  df_uf_ano_atual <- df_uf_inc %>%
+    mutate(
+      ano = substr(SE, 1, 4),
+      ano = as.numeric(ano),
+      semana = substr(SE, 5, 6),
+      semana = as.numeric(semana)
+    ) %>% 
+    filter(ano == max(ano, na.rm = T)) %>% 
+    dplyr::select(semana, inc, incest) %>% 
+    set_names(c("semana", "inc_ano_atual", "inc_est_ano_atual"))
+  
+  df_uf <- df_uf_ano_anterior %>% 
+    left_join(df_uf_ano_atual, by = "semana") 
+  
+  veryhigh <- df_limiar_mem$veryhigh
+  veryhigh <- ifelse(
+    veryhigh > 2 * max(df_uf$inc_est_ano_anterior, na.rm = T) |
+      veryhigh > 2 * max(df_uf$inc_est_ano_atual, na.rm = T), NA, veryhigh            
+  )
+  
+  g_map <- df_uf %>% 
+    ggplot(aes(x = semana)) + 
+    geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = posseason), fill = 'orange', alpha = 0.5) + 
+    geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'yellow', alpha = 0.5) + 
+    geom_ribbon(data = df_mem_uf_sazonal, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'gray', alpha = 0.5) +
+    geom_line(aes(y = inc_est_ano_atual), linewidth = 1, color = "red", show.legend = T) +
+    geom_line(aes(y = inc_ano_atual), linetype = "dashed", linewidth = 0.75, color = "darkred", show.legend = T) +
+    theme_light() +
+    theme(
+      legend.title = element_blank(), 
+      legend.position = "bottom",
+      legend.text = element_text(size = 12),
+      axis.title = element_text(size = 18),
+      axis.text.y = element_text(size = 12),
+      axis.text.x = element_text(size = 12),
+      strip.text.x = element_text(size = 14, colour = "black"),
+      strip.background = element_rect(fill = "white")
+    ) +
+    labs(title = "", y = "Incidência", x = "Semana epidemiolgica")
+  
+
+  df_uf2 <- df_uf %>% 
+    filter(semana >= (max_se - 10) & semana <= (max_se + 5)) 
+  
+  df_mem_uf_sazonal2 <- df_mem_uf_sazonal %>% 
+    filter(semana >= (max_se - 10) & semana <= (max_se + 5))
+  
+  g_map2 <- df_uf2 %>% 
+    ggplot(aes(x = semana)) + 
+    geom_ribbon(data = df_mem_uf_sazonal2, mapping = aes(x = semana, ymin = preseason, ymax = posseason), fill = 'orange', alpha = 0.5) +
+    geom_ribbon(data = df_mem_uf_sazonal2, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'yellow', alpha = 0.5) +
+    geom_ribbon(data = df_mem_uf_sazonal2, mapping = aes(x = semana, ymin = preseason, ymax = epidemic), fill = 'gray', alpha = 0.5) +
+    geom_line(aes(y = inc_est_ano_atual), linewidth = 1, color = "red", show.legend = T) +
+    geom_line(aes(y = inc_ano_atual), linetype = "dashed", linewidth = 0.75, color = "darkred", show.legend = T) +
+    theme_cowplot() +
+    theme(
+      legend.title = element_blank(), 
+      legend.position = "bottom",
+      legend.text = element_text(size = 8),
+      axis.title = element_text(size = 12),
+      axis.text.y = element_text(size = 10),
+      axis.text.x = element_text(size = 10),
+      strip.background = element_rect(fill = "white"),
+      axis.line.y = element_line(colour = "grey80"),
+      axis.line.x = element_line(colour = "grey80")
+    ) +
+    labs(title = "", y = "", x = "")
+  
+  if(!is.na(veryhigh)){
+    g_map <- g_map + 
+      geom_hline(aes(yintercept = veryhigh), color = "black", linewidth = 1, linetype = "dashed") 
+    
+    g_map2 <- g_map2 + 
+      geom_hline(aes(yintercept = veryhigh), color = "black", linewidth = 1, linetype = "dashed") 
+  }
+  
+  final_plot <- ggdraw() +
+    draw_plot(g_map) +
+    draw_plot(g_map2, x = 0.50, y = 0.5, width = 0.5, height = 0.5)
+  
+  return(final_plot)
   
 }
 

@@ -3,7 +3,7 @@ library(jsonlite)
 
 infodengue_api <- "https://api.mosqlimate.org/api/datastore/infodengue/"
 arbovirose <- c("dengue", "chik")
-start_date <- "2018-01-01"
+start_date <- "2024-01-01"
 end_date <- ymd(Sys.Date())
 
 df_final <- NULL
