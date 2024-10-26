@@ -581,9 +581,7 @@ tab_tendencia_por_uf_inc_observada_dengue <- tabela_tendencia_por_uf_inc_observa
   relocate(Rtmean, .after = sigla) %>% 
   dplyr::select(-arbovirose) %>% 
   bind_cols(tabela_tendencia_por_uf_inc_estimada_dengue %>% 
-              dplyr::select(-c(regiao, sigla))) 
-
-tab_tendencia_por_uf_inc_observada_dengue %>% 
+              dplyr::select(-c(regiao, sigla))) %>% 
   gerar_tabela_tendencia(inc_obs_max = inc_obs_max_dengue, inc_est_max = inc_est_max_dengue)
 
 tab_tendencia_por_uf_inc_observada_dengue
