@@ -243,34 +243,61 @@ obter_metricas_por_regional <- function(df_mem_regional_anual, df_regional_se){
   
 }
 
-obter_classificacao_das_regionais <- function(df_regional, tab_regional, se_min = 202400){
+obter_classificacao_das_regionais <- function(df_regional, tab_regional){
+  
+  # df_regional = df_dengue_reg
+  # tab_regional = tabela_reg_dengue
   
   obj_df_regional <- df_regional %>%
-    group_by(regional_id) %>%
-    arrange(SE) %>% 
-    data.frame()
+    arrange(regional_id, SE, codigo) %>% 
+    data.frame() 
   
-  for(i in 1:27){
-    df <- obj_df_regional %>% 
-      filter(codigo == tab_regional$codigo[i]) %>%
-      filter(SE > se_min) %>%
-      arrange(SE)
+  tabela_reg_dengue = tabela_reg_dengue %>%
+    arrange(regional_id, SE, codigo) 
+  
+  se_min = max(obj_df_regional$SE) - 3
+  
+  se_min = 202400
+  obj_df_regional <- obj_df_regional %>%
+    filter(SE > se_min)
+  
+  tab_regional_final <- data.frame()
+  for(cod in unique(obj_df_regional$codigo)){
     
-    semanas <- df %>% filter(incest > tab_regional$veryhigh[i]) %>% pull(SE)
-    tab_regional$selimiaralto[i] <- ifelse(length(semanas) == 0, NA, min(semanas))
+    df_temp <- obj_df_regional %>% 
+      filter(codigo == cod) 
+    
+    temp_tab_regional <- tab_regional %>% 
+      filter(codigo == cod) %>% 
+      dplyr::select(regional_id, veryhigh)
+    
+    df_temp <- df_temp %>% 
+      left_join(temp_tab_regional, by = "regional_id")
+    
+    semanas <- df_temp %>% 
+      filter(incest > veryhigh) %>% 
+      pull(SE)
+    
+    tab_regional$selimiaralto <- ifelse(length(semanas) == 0, NA, min(semanas))
     
     r <- Rt(
-      obj_df_regional %>% filter(codigo == tab_regional$codigo[i]),
+      df_temp,
       count = "casos_est", 
       gtdist = "normal", meangt = 3, sdgt = 1
     )
     
-    tab_regional$Rtmean[i] <- mean(tail(r$Rt, n = 3))
-    tab_regional$secomp1[i] <- sum(tail(r$lwr, n = 3) > 1)
-    tab_regional$weekmax[i] <-  df$SE[which.max(df$casos_est)]
+    temp_tab_regional <- tab_regional %>% 
+      filter(codigo == cod) %>% 
+      mutate(
+        Rtmean = mean(tail(r$Rt, n = 3)),
+        secomp1 = sum(tail(r$lwr, n = 3) > 1),
+        weekmax =  df_temp$SE[which.max(df_temp$casos_est)]
+      )
+    
+    tab_regional_final <- rbind(tab_regional_final, temp_tab_regional) 
   }
   
-  tab_regional <- tab_regional %>%
+  tab_regional_final <- tab_regional_final %>%
     mutate(status = case_when(
       Rtmean > 1.2 & nivel == 1 ~ "Alto em subida",
       Rtmean >= 0.9 & Rtmean < 1.2 & nivel == 1 ~ "Alto estável",
@@ -282,7 +309,7 @@ obter_classificacao_das_regionais <- function(df_regional, tab_regional, se_min 
     status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado", "Não se aplica"))
     )
   
-  return(tab_regional)
+  return(tab_regional_final)
 }
 
 ## Graficos
@@ -491,32 +518,37 @@ construir_tabela_incidencia_por_semana <- function(df, var = "inc"){
 
 gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
   
-  # df <- tabela_tendencia_por_uf_inc_observada_chik %>% 
-  #   bind_cols(tabela_tendencia_por_uf_inc_estimada_chik %>% 
+  # df <- tabela_tendencia_por_uf_inc_observada_dengue %>%
+  # left_join(tab_rt_uf %>% 
+  #             filter(arbovirose == "Dengue"),
+  #           by = "sigla") %>% 
+  #   relocate(Rtmean, .after = sigla) %>% 
+  #   dplyr::select(-arbovirose) %>% 
+  #   bind_cols(tabela_tendencia_por_uf_inc_estimada_dengue %>% 
   #               dplyr::select(-c(regiao, sigla)))
   
   df <- df %>% 
     janitor::clean_names() %>% 
     tibble()
   
-  semana_labels <- colnames(df)[3:6]
+  semana_labels <- colnames(df)[4:7]
   semana_labels <- substr(semana_labels, 6, 7)
   
-  colnames(df) <- c("Regiao", "UF", 
+  colnames(df) <- c("Regiao", "UF", "Rt", 
                     "S1_A", "S2_A", "S3_A", "S4_A", "tendencia_A", 
                     "S1_B", "S2_B", "S3_B", "S4_B", "tendencia_B")
   
   tabela <- df %>% 
     gt(groupname_col = "Regiao") %>% #, row_group_as_column = TRUE
     data_color(
-      columns = 3:6,
+      columns = 4:7,
       colors = scales::col_numeric(alpha = T,
                                    na.color = "#ffffff",
                                    c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
                                    domain = range(0, inc_obs_max))
     ) %>% 
     data_color(
-      columns = 8:11,
+      columns = 9:12,
       colors = scales::col_numeric(alpha = T,
                                    na.color = "#ffffff",
                                    c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
@@ -525,6 +557,7 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
     cols_label(
       Regiao = "Região",
       UF = "UF",
+      Rt = "Rt",
       S1_A = semana_labels[1],
       S2_A = semana_labels[2],
       S3_A = semana_labels[3], 
@@ -545,14 +578,14 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
       locations = cells_row_groups()
     ) %>% 
     fmt_number(
-      columns = c(3:6, 8:11),
+      columns = c(4:7, 9:12),
       decimals = 1
     ) %>% 
     cols_align(align = "center") %>% 
-    tab_spanner(columns = 3:6, md("**Incidência observada**")) %>% 
-    tab_spanner(columns = 8:11, md("**Incidência estimada**")) %>% 
+    tab_spanner(columns = 4:7, md("**Incidência observada**")) %>% 
+    tab_spanner(columns = 9:12, md("**Incidência estimada**")) %>% 
     text_transform(
-      locations = cells_body(columns = c(7, 12)), 
+      locations = cells_body(columns = c(8, 13)), 
       fn = function(x) {
         dplyr::case_when(
           x == "up" ~ md("{\\color{dark_red} \\uparrow}"),   # Seta para cima (vermelho)
@@ -735,7 +768,7 @@ get_map_mem_incidencia_br <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_s
     ) +
     labs(title = "", y = "Incidência", x = "Semana epidemiolgica")
   
-
+  
   df_uf2 <- df_uf %>% 
     filter(semana >= (max_se - 10) & semana <= (max_se + 5)) 
   
