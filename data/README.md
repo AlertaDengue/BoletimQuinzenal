@@ -8,6 +8,6 @@ restab_chik.RData : tabela historico alerta para chik atualizada semanalmente.
 
 mem2024: limiares mem calculados para UF, Regionais e municipios (necessario para a tabela).  
 
-cidades: arquivo com a divisao administrativa usada no Infodengue
+cidades2024: dataframe com a divisao administrativa usada no Infodengue em 2024 
 
 
