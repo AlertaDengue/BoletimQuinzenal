@@ -303,10 +303,10 @@ obter_classificacao_das_regionais <- function(df_regional, tab_regional){
       Rtmean >= 0.9 & Rtmean < 1.2 & nivel == 1 ~ "Alto estável",
       Rtmean < 0.9 & nivel == 1 ~ "Alto em queda",
       nivel == 0 ~ "Baixo ou moderado",
-      TRUE ~ "Não se aplica"
+      TRUE ~ NA # "Não se aplica"
     ),
-    status = ifelse(is.na(status), "Não se aplica", status),
-    status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado", "Não se aplica"))
+    # status = ifelse(is.na(status), "Não se aplica", status),
+    status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado")) #, "Não se aplica"
     )
   
   return(tab_regional_final)
@@ -346,7 +346,9 @@ obter_mapa_risco_classif <- function(shape){
     ggplot() +
     geom_sf(aes(fill = status), show.legend=TRUE) +
     scale_fill_manual(
-      values = c("#c93232", "#f2bd35", "yellow2","#acdb69", "#fefefe"),
+      values = c("#c93232", "#f2bd35", "yellow2", "#fefefe"),
+      na.translate = F,
+      # na.value = "#fefefe",
       drop = FALSE) +
     labs(fill = "Rt <= 1") +
     theme_minimal() +
@@ -447,10 +449,10 @@ gg_inc_dengue_chikv <- function(df){
     facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y")
 }
 
-add_arrows <- function(x){
+add_arrows <- function(x, ref = 0){
   icon = ifelse(
-    x > 0, "up", #&#129093 arrow-up
-    ifelse(x < 0, 
+    x > ref, "up", #&#129093 arrow-up
+    ifelse(x < ref, 
            "down", #&#129095 arrow-down
            "right") #&#129094 
   )
@@ -468,7 +470,7 @@ verificar_tendencia_regressao <- function(df) {
     
     coef_angular <- coef(modelo)[2]
     
-    return(add_arrows(coef_angular))
+    return(add_arrows(coef_angular, ref = 0))
     
     # if (coef_angular > 0) {
     #   return("Crescente")
@@ -526,29 +528,30 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
   #   dplyr::select(-arbovirose) %>% 
   #   bind_cols(tabela_tendencia_por_uf_inc_estimada_dengue %>% 
   #               dplyr::select(-c(regiao, sigla)))
+  # df <- tab_tendencia_por_uf_inc_observada_dengue
   
   df <- df %>% 
     janitor::clean_names() %>% 
     tibble()
   
-  semana_labels <- colnames(df)[4:7]
+  semana_labels <- colnames(df)[4:12] #[4:7]
   semana_labels <- substr(semana_labels, 6, 7)
   
-  colnames(df) <- c("Regiao", "UF", "Rt", 
-                    "S1_A", "S2_A", "S3_A", "S4_A", "tendencia_A", 
-                    "S1_B", "S2_B", "S3_B", "S4_B", "tendencia_B")
+  colnames(df) <- c("Regiao", "UF", "Rt", "tendencia",
+                    "S1_A", "S2_A", "S3_A", "S4_A", #"tendencia_A", 
+                    "S1_B", "S2_B", "S3_B", "S4_B") #,"tendencia_B"
   
   tabela <- df %>% 
     gt(groupname_col = "Regiao") %>% #, row_group_as_column = TRUE
     data_color(
-      columns = 4:7,
+      columns = 5:8, #4:7
       colors = scales::col_numeric(alpha = T,
                                    na.color = "#ffffff",
                                    c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
                                    domain = range(0, inc_obs_max))
     ) %>% 
     data_color(
-      columns = 9:12,
+      columns = 8:12, #9:12
       colors = scales::col_numeric(alpha = T,
                                    na.color = "#ffffff",
                                    c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
@@ -558,16 +561,16 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
       Regiao = "Região",
       UF = "UF",
       Rt = "Rt",
+      tendencia= "",
       S1_A = semana_labels[1],
       S2_A = semana_labels[2],
       S3_A = semana_labels[3], 
       S4_A = semana_labels[4],
-      tendencia_A = "",
       S1_B = semana_labels[1],
       S2_B = semana_labels[2],
       S3_B = semana_labels[3], 
-      S4_B = semana_labels[4],
-      tendencia_B = ""
+      S4_B = semana_labels[4]#,
+      # tendencia_B = ""
     ) %>%
     tab_style(
       style = cell_text(weight = "bold"),
@@ -578,14 +581,14 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
       locations = cells_row_groups()
     ) %>% 
     fmt_number(
-      columns = c(4:7, 9:12),
+      columns = c(5:12), #4:7, 9:12
       decimals = 1
     ) %>% 
     cols_align(align = "center") %>% 
-    tab_spanner(columns = 4:7, md("**Incidência observada**")) %>% 
+    tab_spanner(columns = 5:8, md("**Incidência observada**")) %>% 
     tab_spanner(columns = 9:12, md("**Incidência estimada**")) %>% 
     text_transform(
-      locations = cells_body(columns = c(8, 13)), 
+      locations = cells_body(columns = c(4)), 
       fn = function(x) {
         dplyr::case_when(
           x == "up" ~ md("{\\color{dark_red} \\uparrow}"),   # Seta para cima (vermelho)
