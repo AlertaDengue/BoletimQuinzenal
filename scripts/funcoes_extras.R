@@ -1,6 +1,10 @@
 obter_siglas_codigos <- function(df, merge_by = "codigo"){
   
   df_uf = data.frame(
+    regiao = c("Norte", "Norte", "Norte", "Norte", "Norte", "Norte", "Nordeste",
+               "Nordeste", "Nordeste", "Nordeste", "Nordeste", "Nordeste", "Nordeste",
+               "Nordeste", "Nordeste", "Centro-Oeste", "Centro-Oeste", "Centro-Oeste", "Centro-Oeste", "Sudeste", "Sul",
+               "Sudeste", "Sudeste", "Sudeste", "Sul", "Sul", "Norte"),
     estado = c("Rondônia", "Roraima", "Amazonas", "Pará", "Amapá", "Tocantins", "Alagoas",
                "Bahia", "Ceará", "Maranhão", "Paraíba", "Pernambuco", "Piauí",
                "Rio Grande do Norte", "Sergipe", "Mato Grosso", "Mato Grosso do Sul",
@@ -121,22 +125,26 @@ obter_metricas_macrorregionais_por_semana <- function(df){
 
 obter_metricas_regionais_por_semana <- function(df){
   
-  result <- df %>% 
-    mutate(
-      codigo = floor(municipio_geocodigo/100000),
-      codigo = as.character(codigo)
-    ) %>%
+  # df <- df_dengue_chik %>% filter(arbovirose == "Dengue")
+  
+  result <- df %>%
+    dplyr::select(regional_id, regional, macroregional_id, macroregional, SE, casos, casos_est, pop) %>%
     group_by(regional_id, SE) %>%
-    summarise(casos = sum(casos),
-              #casprov = sum(casprov),
-              casos_est = sum(casos_est),
-              pop = sum(pop),
-              macroregional_id = unique( macroregional_id),
-              codigo = unique(codigo)) %>%
-    mutate(inc = casos / pop * 100000,
-           #incprov = casprov / pop * 100000,
-           incest = casos_est/pop * 100000) %>%
-    arrange(codigo, macroregional_id, SE)
+    reframe(
+      casos = sum(casos),
+      casos_est = sum(casos_est),
+      pop = sum(pop),
+      macroregional_id = unique(macroregional_id),
+      regional = unique(regional),
+      macroregional = unique(macroregional)
+    ) %>%
+    mutate(
+      inc = casos / pop * 100000,
+      incest = casos_est/pop * 100000,
+      codigo = substr(macroregional_id, 1, 2),
+      codigo =  as.character(codigo)
+    ) %>%
+    arrange(regional_id, macroregional_id, SE)
   
   return(result)
 }
@@ -243,6 +251,18 @@ obter_metricas_por_regional <- function(df_mem_regional_anual, df_regional_se){
   
 }
 
+obter_rt <- function(df, count_var, dist, mean, sd){
+  
+  result <- Rt(
+    df,
+    count = count_var, 
+    gtdist = dist, meangt = mean, sdgt = sd
+  )
+  
+  return(result)
+}
+
+# Revisar obter_classificacao_das_regionais
 obter_classificacao_das_regionais <- function(df_regional, tab_regional){
   
   # df_regional = df_dengue_reg
@@ -253,7 +273,7 @@ obter_classificacao_das_regionais <- function(df_regional, tab_regional){
     data.frame() 
   
   tabela_reg_dengue = tabela_reg_dengue %>%
-    arrange(regional_id, SE, codigo) 
+    arrange(regional_id, codigo) 
   
   se_min = max(obj_df_regional$SE) - 3
   
@@ -271,30 +291,35 @@ obter_classificacao_das_regionais <- function(df_regional, tab_regional){
       filter(codigo == cod) %>% 
       dplyr::select(regional_id, veryhigh)
     
-    df_temp <- df_temp %>% 
-      left_join(temp_tab_regional, by = "regional_id")
-    
-    semanas <- df_temp %>% 
-      filter(incest > veryhigh) %>% 
-      pull(SE)
-    
-    tab_regional$selimiaralto <- ifelse(length(semanas) == 0, NA, min(semanas))
-    
-    r <- Rt(
-      df_temp,
-      count = "casos_est", 
-      gtdist = "normal", meangt = 3, sdgt = 1
-    )
-    
-    temp_tab_regional <- tab_regional %>% 
-      filter(codigo == cod) %>% 
-      mutate(
-        Rtmean = mean(tail(r$Rt, n = 3)),
-        secomp1 = sum(tail(r$lwr, n = 3) > 1),
-        weekmax =  df_temp$SE[which.max(df_temp$casos_est)]
+    if(nrow(df_temp) > 0 & nrow(temp_tab_regional) > 0){
+      
+      df_temp <- df_temp %>% 
+        left_join(temp_tab_regional, by = "regional_id")
+      
+      semanas <- df_temp %>% 
+        filter(incest > veryhigh) %>% 
+        pull(SE)
+      
+      tab_regional$selimiaralto <- ifelse(length(semanas) == 0, NA, min(semanas))
+      
+      r <- Rt(
+        df_temp,
+        count = "casos_est", 
+        gtdist = "normal", meangt = 3, sdgt = 1
       )
+      
+      temp_tab_regional <- tab_regional %>% 
+        filter(codigo == cod) %>% 
+        mutate(
+          Rtmean = mean(tail(r$Rt, n = 3)),
+          secomp1 = sum(tail(r$lwr, n = 3) > 1),
+          weekmax =  df_temp$SE[which.max(df_temp$casos_est)]
+        )
+      
+      tab_regional_final <- rbind(tab_regional_final, temp_tab_regional) 
+      
+    }
     
-    tab_regional_final <- rbind(tab_regional_final, temp_tab_regional) 
   }
   
   tab_regional_final <- tab_regional_final %>%
@@ -310,6 +335,126 @@ obter_classificacao_das_regionais <- function(df_regional, tab_regional){
     )
   
   return(tab_regional_final)
+}
+
+
+obter_rt_por_uf <- function(codigo_id, df_uf, tabela_uf, se_min = 202400) {
+  
+  temp_tabela_uf <- tabela_uf %>%
+    filter(codigo == codigo_id)
+  
+  temp_obj <- df_uf %>%
+    filter(codigo == codigo_id) %>%
+    arrange(SE) %>% 
+    data.frame()
+  
+  if(nrow(temp_obj) > 0 & nrow(temp_tabela_uf) > 0){
+    
+    temp_obj2 <- temp_obj %>%
+      filter(SE > se_min)
+    
+    semanas <- temp_obj2 %>%
+      filter(incest > temp_tabela_uf$veryhigh) %>%
+      pull(SE)
+    
+    temp_tabela_uf$selimiaralto <- ifelse(length(semanas) == 0, NA, min(semanas, na.rm = T))
+    
+    r <- Rt(temp_obj, count = "casos_est", 
+            gtdist = "normal", meangt = 3, sdgt = 1)
+    
+    temp_tabela_uf$Rtmean <- mean(tail(r$Rt, n = 3))
+    temp_tabela_uf$secomp1 <- sum(tail(r$lwr, n = 3) > 1)
+    
+    temp_tabela_uf$weekmax <- temp_obj %>%
+      slice_max(casos_est, n = 1) %>%
+      slice(n()) %>% 
+      pull(SE)
+    
+    temp_tabela_uf <- temp_tabela_uf %>%
+      mutate(status = case_when(
+        Rtmean > 1.2 & nivelNowcast == 1 ~ "Alto em subida",
+        Rtmean >= 0.9 & Rtmean < 1.2 & nivelNowcast == 1 ~ "Alto estável",
+        Rtmean < 0.9 & nivelNowcast == 1 ~ "Alto em queda",
+        nivelNowcast == 0 ~ "Baixo ou moderado",
+        TRUE ~ NA # "Não se aplica"
+      ),
+      # status = ifelse(is.na(status), "Não se aplica", status),
+      status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado")),
+      tendencia = case_when(
+        Rtmean > 1.2 ~ "Crescente",
+        Rtmean > 1.1 & Rtmean <= 1.2 ~ "Crescente leve",
+        Rtmean > 1 & Rtmean <= 1.1 ~ "Estável",
+        Rtmean <= 1 ~ "Descrescente",
+        TRUE ~ NA # "Não se aplica"
+      ),
+      tendencia = factor(tendencia, levels = c("Crescente", "Crescente leve", "Estável", "Descrescente"))
+      )
+    
+    return(temp_tabela_uf)
+    
+  }
+  
+}
+
+obter_rt_por_macroregiao <- function(macro_id, df_macro, tabela_macro, se_min = 202400) {
+  
+  # macro_id = unique(df_dengue_macro_se$macroregional_id)[1]
+  # df_macro = df_dengue_macro_se
+  # tabela_macro = tabela_dengue_macro
+  # se_min = 202400
+  
+  temp_tabela_macro <- tabela_macro %>%
+    filter(macroregional_id == macro_id)
+  
+  temp_obj <- df_macro %>%
+    filter(macroregional_id == macro_id) %>%
+    arrange(SE) %>% 
+    data.frame()
+  
+  if(nrow(temp_obj) > 0 & nrow(temp_tabela_macro) > 0){
+    
+    temp_obj2 <- temp_obj %>%
+      filter(SE > se_min)
+    
+    semanas <- temp_obj2 %>%
+      filter(incest > temp_tabela_macro$veryhigh) %>%
+      pull(SE)
+    
+    temp_tabela_macro$selimiaralto <- ifelse(length(semanas) == 0, NA, min(semanas, na.rm = T))
+    
+    r <- Rt(temp_obj, count = "casos_est", 
+            gtdist = "normal", meangt = 3, sdgt = 1)
+    
+    temp_tabela_macro$Rtmean <- mean(tail(r$Rt, n = 3))
+    temp_tabela_macro$secomp1 <- sum(tail(r$lwr, n = 3) > 1)
+    
+    temp_tabela_macro$weekmax <- temp_obj %>%
+      slice_max(casos_est, n = 1) %>%
+      slice(n()) %>% 
+      pull(SE)
+    
+    temp_tabela_macro <- temp_tabela_macro %>%
+      mutate(
+        status = case_when(
+          Rtmean > 1.2 & nivelNowcast == 1 ~ "Alto em subida",
+          Rtmean >= 0.9 & Rtmean < 1.2 & nivelNowcast == 1 ~ "Alto estável",
+          Rtmean < 0.9 & nivelNowcast == 1 ~ "Alto em queda",
+          nivelNowcast == 0 ~ "Baixo ou moderado",
+          TRUE ~ NA # "Não se aplica"
+        ),
+        status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado")),
+        tendencia = case_when(
+          Rtmean > 1.2 ~ "Crescente",
+          Rtmean > 1.1 & Rtmean <= 1.2 ~ "Crescente leve",
+          Rtmean > 1 & Rtmean <= 1.1 ~ "Estável",
+          Rtmean <= 1 ~ "Descrescente",
+          TRUE ~ NA # "Não se aplica"
+        ),
+        tendencia = factor(tendencia, levels = c("Crescente", "Crescente leve", "Estável", "Descrescente"))
+      )
+    
+    return(temp_tabela_macro)
+  }
 }
 
 ## Graficos
@@ -340,16 +485,17 @@ gg_bar_pop_risco <- function(df, por_regiao = T){
   
 }
 
-obter_mapa_risco_classif <- function(shape){
-  
-  g_map <- shape %>% 
+obter_mapa_risco_classif <- function(shape_mun, shape_state){
+ 
+  g_map <- shape_mun %>% 
     ggplot() +
-    geom_sf(aes(fill = status), show.legend=TRUE) +
+    geom_sf(aes(fill = status), color = "#ababab", show.legend=TRUE) +
     scale_fill_manual(
       values = c("#c93232", "#f2bd35", "yellow2", "#fefefe"),
       na.translate = F,
       # na.value = "#fefefe",
       drop = FALSE) +
+    geom_sf(data = shape_state, fill = NA, color = "#4d4d4d", size = 3) +
     labs(fill = "Rt <= 1") +
     theme_minimal() +
     theme(
@@ -597,6 +743,189 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
         )
       }
     )
+  
+  return(tabela)
+}
+
+gerar_tabela_tendencia_uf <- function(df){
+  
+  df <- tabela_dengue_chik_uf
+  
+  df <- df %>% 
+    tibble() %>%
+    arrange(regiao, arbovirose) %>%
+    group_by(regiao, arbovirose) %>%
+    mutate(
+      show_arbovirose = if_else(row_number() == 1, arbovirose, ""),
+      show_estado = if_else(row_number() > 1 & estado == lag(estado), "", estado)
+    ) %>% 
+    ungroup()
+  
+  tabela <- df %>%
+    dplyr::select(-c(show_arbovirose, show_estado)) %>% 
+    gt(groupname_col = "regiao") %>%
+    cols_label(
+      regiao = md("**Região**"),
+      arbovirose = "",
+      estado = md("**Estado**"),
+      Rtmean = md("**Rt**"),
+      tendencia = md("**Tendência**")
+    ) %>%
+    cols_align(align = "center") %>% 
+    tab_style(
+      style = list(cell_fill(color = "#bfbfbf"), cell_text(weight = "bold")),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = list(cell_fill(color = "#dbdbdb"), cell_text(weight = "bold")),
+      locations = cells_row_groups()
+    ) %>%
+    fmt_number(
+      columns = c(4), # Ajuste conforme necessário
+      decimals = 2
+    ) %>%
+    text_transform(
+      locations = cells_body(columns = c(arbovirose)),
+      fn = function(x) df$show_arbovirose
+    ) %>% 
+    text_transform(
+      locations = cells_body(columns = c(estado)),
+      fn = function(x) df$show_estado
+    ) %>% 
+    tab_style(
+      style = list(cell_fill(color = "#ebebeb")),
+      locations = cells_body(
+        rows = arbovirose == "Chikungunya"
+      )
+    ) %>%
+    tab_style(
+      style = list(cell_text(align = "left")),
+      locations = cells_body(columns = c(arbovirose))
+    ) %>% 
+    tab_style(
+      style = cell_borders(
+        sides = c("top", "bottom"),
+        color = "black",
+        weight = px(2)
+      ),
+      locations = cells_row_groups()
+    ) %>%
+    tab_style(
+      style = cell_borders(
+        sides = "bottom",
+        color = "black",
+        weight = px(3)
+      ),
+      locations = cells_body(rows = nrow(df))
+    ) %>%
+    tab_style(
+      style = cell_borders(
+        sides = "top",
+        color = "black",
+        weight = px(3)
+      ),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = list(cell_text(weight = "bold")),
+      locations = cells_row_groups()
+    )
+
+  return(tabela)
+}
+
+gerar_tabela_tendencia_macro <- function(df){
+  
+  df <- df %>% 
+    tibble() %>%
+    arrange(regiao, arbovirose) %>%
+    group_by(regiao, arbovirose) %>%
+    mutate(
+      show_arbovirose = if_else(row_number() == 1, arbovirose, ""),
+      show_estado = if_else(row_number() > 1 & estado == lag(estado), "", estado)
+      ) %>% 
+    ungroup()
+  
+  tabela <- df %>%
+    dplyr::select(-c(show_arbovirose, show_estado)) %>% 
+    gt(groupname_col = "regiao") %>%
+    cols_label(
+      regiao = md("**Região**"),
+      arbovirose = "",
+      estado = md("**Estado**"),
+      macroregional = md("**Macroregional**"),
+      Rtmean = md("**Rt**"),
+      tendencia = md("**Tendência**")
+    ) %>%
+    cols_align(align = "center") %>% 
+    tab_style(
+      style = list(cell_fill(color = "#bfbfbf"), cell_text(weight = "bold")),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = list(cell_fill(color = "#dbdbdb"), cell_text(weight = "bold")),
+      locations = cells_row_groups()
+    ) %>%
+    fmt_number(
+      columns = c(5), # Ajuste conforme necessário
+      decimals = 2
+    ) %>%
+    text_transform(
+      locations = cells_body(columns = c(arbovirose)),
+      fn = function(x) df$show_arbovirose
+    ) %>% 
+    text_transform(
+      locations = cells_body(columns = c(estado)),
+      fn = function(x) df$show_estado
+    ) %>% 
+    tab_style(
+      style = list(cell_fill(color = "#ebebeb")),
+      locations = cells_body(
+        rows = arbovirose == "Chikungunya"
+      )
+    ) %>%
+    tab_style(
+      style = list(cell_text(align = "left")),
+      locations = cells_body(columns = c(arbovirose))
+    ) %>% 
+    tab_style(
+      style = cell_borders(
+        sides = c("top", "bottom"),
+        color = "black",
+        weight = px(2)
+      ),
+      locations = cells_row_groups()
+    ) %>%
+    tab_style(
+      style = cell_borders(
+        sides = "bottom",
+        color = "black",
+        weight = px(3)
+      ),
+      locations = cells_body(rows = nrow(df))
+    ) %>%
+    tab_style(
+      style = cell_borders(
+        sides = "top",
+        color = "black",
+        weight = px(3)
+      ),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_column_labels()
+    ) %>%
+    tab_style(
+      style = list(cell_text(weight = "bold")),
+      locations = cells_row_groups()
+    ) %>% 
+    as_latex()
+  
   
   return(tabela)
 }

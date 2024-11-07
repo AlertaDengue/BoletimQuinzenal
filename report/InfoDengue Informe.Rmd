@@ -35,9 +35,9 @@ df_dengue_nacional <- df_dengue_chik %>%
   filter(arbovirose == "Dengue") %>% 
   obter_metricas_nacionais() #Nacional
 
-df_dengue_uf <- df_dengue_chik %>% 
+df_dengue_uf <- df_dengue_chik %>% # Por UF e SE
   filter(arbovirose == "Dengue") %>% 
-  obter_metricas_estaduais() %>% # Estadual
+  obter_metricas_estaduais() %>%
   mutate(
     ano = as.numeric(substr(SE, 1, 4)),
     semana = as.numeric(substr(SE, 5, 6))
@@ -47,9 +47,11 @@ df_dengue_total <- df_dengue_chik %>%
   filter(arbovirose == "Dengue") %>% 
   obter_metricas_estaduais_por_ano() # Estadual (por ano)
 
+# Macroregional (por semana)
 df_dengue_macro_se <- df_dengue_chik %>% 
   filter(arbovirose == "Dengue") %>% 
-  obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
+  obter_metricas_macrorregionais_por_semana() %>% 
+  data.frame()
 
 df_dengue_reg <- df_dengue_chik %>% 
   filter(arbovirose == "Dengue") %>% 
@@ -82,14 +84,15 @@ gg_pop_risco_dengue <- tab_pop_risco_dengue %>%
   gg_bar_pop_risco(por_regiao = F)
 
 gg_map_risco_classif_dengue <- obter_mapa_risco_classif(
-  shape = shape_dengue %>% 
+  shape_mun = shape_dengue %>% 
     mutate(
       status = case_when(
         # is.na(status) ~ "Não se aplica",
         TRUE ~ status
       ),
       status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado")) #, "Não se aplica"
-    )
+    ),
+  shape_state = shape_state
 )
 
 dengue_razao_anual <- df_dengue_chik %>% filter(arbovirose == "Dengue") %>% 
@@ -123,9 +126,11 @@ df_chik_total <- df_dengue_chik %>%
   filter(arbovirose == "Chikungunya") %>% 
   obter_metricas_estaduais_por_ano() # Estadual (por ano)
 
+# Macroregional (por semana)
 df_chik_macro_se <- df_dengue_chik %>% 
   filter(arbovirose == "Chikungunya") %>% 
-  obter_metricas_macrorregionais_por_semana() # Macroregional (por semana)
+  obter_metricas_macrorregionais_por_semana() %>% 
+  data.frame()
 
 df_chik_reg <- df_dengue_chik %>% 
   filter(arbovirose == "Chikungunya") %>% 
@@ -157,14 +162,15 @@ gg_pop_risco_chik <- tab_pop_risco_chik %>%
   gg_bar_pop_risco(por_regiao = T)
 
 gg_map_risco_classif_chik <- obter_mapa_risco_classif(
-  shape = shape_chik %>% 
+  shape_mun = shape_chik %>% 
     mutate(
       status = case_when(
         # is.na(status) ~ "Não se aplica",
         TRUE ~ status
       ),
       status = factor(status, levels = c("Alto em subida", "Alto estável", "Alto em queda", "Baixo ou moderado")) #, "Não se aplica"
-    )
+    ),
+  shape_state = shape_state
 )
 ```
 
@@ -568,7 +574,6 @@ tabela_tendencia_por_uf_inc_estimada_dengue <- df_dengue_uf %>%
 
 tabela_tendencia_por_uf_inc_observada_dengue <- tabela_tendencia_por_uf_inc_observada_dengue %>% 
   obter_siglas_codigos() %>% 
-  adicionar_regiao() %>% 
   relocate(regiao, .before = codigo) %>% 
   relocate(sigla, .after = regiao) %>% 
   as_tibble() %>% 
@@ -576,7 +581,6 @@ tabela_tendencia_por_uf_inc_observada_dengue <- tabela_tendencia_por_uf_inc_obse
 
 tabela_tendencia_por_uf_inc_estimada_dengue <- tabela_tendencia_por_uf_inc_estimada_dengue %>% 
   obter_siglas_codigos() %>% 
-  adicionar_regiao() %>% 
   relocate(regiao, .before = codigo) %>% 
   relocate(sigla, .after = regiao) %>% 
   as_tibble() %>% 
@@ -638,7 +642,6 @@ tabela_tendencia_por_uf_inc_estimada_chik <- df_chik_uf %>%
 
 tabela_tendencia_por_uf_inc_observada_chik <- tabela_tendencia_por_uf_inc_observada_chik %>% 
   obter_siglas_codigos() %>% 
-  adicionar_regiao() %>% 
   relocate(regiao, .before = codigo) %>% 
   relocate(sigla, .after = regiao) %>% 
   as_tibble() %>% 
@@ -646,7 +649,6 @@ tabela_tendencia_por_uf_inc_observada_chik <- tabela_tendencia_por_uf_inc_observ
 
 tabela_tendencia_por_uf_inc_estimada_chik <- tabela_tendencia_por_uf_inc_estimada_chik %>% 
   obter_siglas_codigos() %>% 
-  adicionar_regiao() %>% 
   relocate(regiao, .before = codigo) %>% 
   relocate(sigla, .after = regiao) %>% 
   as_tibble() %>% 
@@ -736,8 +738,6 @@ O Infodengue, em parceria com o Mosqlimate, gerou previsões para a temporada 20
 \begin{center}
 \includegraphics{`r paste0("forecast_", ultima_semana_dengue ,"_MG")`} 
 
-\includegraphics{`r paste0("forecast_", ultima_semana_dengue ,"_ES")`} 
-
 \includegraphics{`r paste0("forecast_", ultima_semana_dengue ,"_RJ")`} 
 
 \includegraphics{`r paste0("forecast_", ultima_semana_dengue ,"_SP")`}
@@ -784,18 +784,142 @@ O Infodengue, em parceria com o Mosqlimate, gerou previsões para a temporada 20
 \newpage
 \textbf{Alguns detalhes por região:}
 
-A tabela abaixo mostra as macrorregionais que apresentaram nível de incidência médio ou alto, para dengue e Chikungunya.
+A tabela a seguir mostra os estados que apresentaram tendência de crescimento do número de casos (Rt médio maior ou igual a 1,1).
 
-\begin{center}
-\includegraphics{tabela_nivel_incidencia}
-\end{center}
+**Tabela 5.** Estados que apresentaram tendência de crescimento.
+```{r}
+tabela_dengue_uf <- memUFanual %>%
+  left_join(df_dengue_uf %>% 
+              filter(SE == max(SE, na.rm = T)) %>% 
+              select(codigo, incest, inc) %>% 
+              mutate(codigo = as.character(codigo)),
+            by = "codigo") %>% 
+  mutate(
+    nivelNowcast = as.numeric(incest > (2 * veryhigh)),
+    Rtmean = NA,
+    secomp1 = NA,
+    weekmax = NA
+  )
 
-\newpage
+tabela_dengue_uf <- map_dfr(
+  unique(df_dengue_uf$codigo),
+  obter_rt_por_uf,
+  df_uf = df_dengue_uf,
+  tabela_uf = tabela_dengue_uf
+)
+
+tabela_chik_uf <- memUFanual.chi %>%
+  left_join(df_chik_uf %>% 
+              filter(SE == max(SE, na.rm = T)) %>% 
+              select(codigo, incest, inc) %>% 
+              mutate(codigo = as.character(codigo)),
+            by = "codigo") %>% 
+  mutate(
+    nivelNowcast = as.numeric(incest > (2 * veryhigh)),
+    Rtmean = NA,
+    secomp1 = NA,
+    weekmax = NA
+  )
+
+tabela_chik_uf <- map_dfr(
+  unique(df_chik_uf$codigo),
+  obter_rt_por_uf,
+  df_uf = df_chik_uf,
+  tabela_uf = tabela_chik_uf
+)
+
+tabela_dengue_chik_uf <- tabela_dengue_uf %>% 
+      mutate(arbovirose = "Dengue") %>% 
+  bind_rows(tabela_chik_uf %>% 
+      mutate(arbovirose = "Chikungunya")) %>% 
+  filter(tendencia %in% c("Crescente", "Crescente leve")) %>% 
+  mutate(
+    arbovirose = factor(arbovirose, levels = c("Dengue", "Chikungunya"))
+  ) %>% 
+  dplyr::select(
+    regiao,
+    arbovirose,
+    estado,
+    Rtmean,
+    # status,
+    tendencia
+  )
+
+tabela_dengue_chik_uf %>% 
+  gerar_tabela_tendencia_uf()
+```
+
 A tabela a seguir mostra as macrorregiões que apresentaram tendência de crescimento do número de casos (Rt médio maior ou igual a 1,1).
 
-\begin{center}
-\includegraphics{tabela_nivel_incidencia2}
-\end{center}
+**Tabela 6.** Macrorregiões que apresentaram tendência de crescimento.
+```{r}
+tabela_dengue_macro <- memMacroanual %>%
+  left_join(df_dengue_macro_se %>% 
+              filter(SE == max(SE, na.rm = T)) %>% 
+              select(macroregional_id, incest, inc) %>% 
+              mutate(macroregional_id = as.character(macroregional_id)),
+            by = "macroregional_id") %>% 
+  mutate(
+    nivelNowcast = as.numeric(incest > (2 * veryhigh)),
+    Rtmean = NA,
+    secomp1 = NA,
+    weekmax = NA
+  )
+
+tabela_dengue_macro <- map_dfr(
+  unique(df_dengue_macro_se$macroregional_id),
+  obter_rt_por_macroregiao,
+  df_macro = df_dengue_macro_se,
+  tabela_macro = tabela_dengue_macro
+)
+
+tabela_chik_macro <- memMacroanual.chi %>%
+  left_join(df_chik_macro_se %>% 
+              filter(SE == max(SE, na.rm = T)) %>% 
+              select(macroregional_id, incest, inc) %>% 
+              mutate(macroregional_id = as.character(macroregional_id)),
+            by = "macroregional_id") %>% 
+  mutate(
+    nivelNowcast = as.numeric(incest > (2 * veryhigh)),
+    Rtmean = NA,
+    secomp1 = NA,
+    weekmax = NA
+  )
+
+tabela_chik_macro <- map_dfr(
+  unique(df_chik_macro_se$macroregional_id),
+  obter_rt_por_macroregiao,
+  df_macro = df_chik_macro_se,
+  tabela_macro = tabela_chik_macro
+)
+
+tabela_dengue_chik_macro <- tabela_dengue_macro %>% 
+  mutate(arbovirose = "Dengue") %>% 
+  bind_rows(
+    tabela_chik_macro %>% 
+      mutate(arbovirose = "Chikungunya")
+  ) %>% 
+  filter(tendencia %in% c("Crescente", "Crescente leve")) %>% 
+  mutate(
+    codigo = substr(macroregional_id, 1, 2),
+    arbovirose = factor(arbovirose, levels = c("Dengue", "Chikungunya"))
+  ) %>% 
+  obter_siglas_codigos(merge_by = "codigo") %>% 
+  dplyr::select(
+    regiao,
+    arbovirose,
+    estado,
+    macroregional,
+    Rtmean,
+    # status,
+    tendencia
+  ) %>% 
+  arrange(regiao, arbovirose)
+
+tabela_dengue_chik_macro %>% 
+  gerar_tabela_tendencia_macro()
+```
+
 <!-- **Norte:** Pequeno crescimento dos casos estimados no Amazonas, com 1 município em alerta laranja (Benjamin Constant). Roraima apresenta leve tendência de crescimento dos casos, a monitorar. Amapá apresentando nível alto de incidência e tendência de crescimento. Os estados do Pará, Amazonas e Amapá apresentam curva de casos acima dos valores epidêmicos históricos. -->
 
 <!-- \vspace{0.75cm} -->

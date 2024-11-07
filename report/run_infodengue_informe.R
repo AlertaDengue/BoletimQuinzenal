@@ -1,5 +1,3 @@
-source("scripts/funcoes_extras.R", encoding = "utf-8")
-
 r_pkgs <- c("tidyverse", "AlertTools", "sf", "arrow",
             "ggplot2", "ggpubr", "geofacet", "cowplot",
             "janitor", "kableExtra", "xtable", "data.table",
@@ -7,6 +5,8 @@ r_pkgs <- c("tidyverse", "AlertTools", "sf", "arrow",
 
 if(!"pacman" %in% rownames(installed.packages())) install.packages("pacman")
 pacman::p_load(char = r_pkgs)
+
+source("scripts/funcoes_extras.R", encoding = "utf-8")
 
 # removing NA from Kable
 options(knitr.kable.NA = '')
@@ -163,6 +163,10 @@ memUFsazonal <- memUFsazonal %>%
   mutate(codigo = as.character(codigo)) %>%
   obter_siglas_codigos(merge_by = "codigo")
 
+memMacroanual <- memMacroanual %>% 
+  rename(macroregional_id = nome) %>%
+  mutate(macroregional_id = as.character(macroregional_id)) 
+
 ## Chikv
 memUFanual.chi <- memUFanual.chi %>% 
   rename(codigo = nome) %>% 
@@ -187,6 +191,13 @@ memUFsazonal.chi <- memUFsazonal.chi %>%
   rename(codigo = uf) %>%
   mutate(codigo = as.character(codigo)) %>%
   obter_siglas_codigos(merge_by = "codigo")
+
+memMacroanual.chi <- memMacroanual.chi %>% 
+  rename(macroregional_id = nome) %>%
+  mutate(macroregional_id = as.character(macroregional_id)) 
+
+shape_state <- geobr::read_state(year = 2020) %>% 
+  dplyr::select(code_state)
 
 # RUN
 output_directory <- paste0("report/outputs/")
