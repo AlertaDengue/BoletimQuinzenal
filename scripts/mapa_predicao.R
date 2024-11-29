@@ -2,6 +2,8 @@
 ## e forecast de longo prazo
 # claudia, nov 2024
 
+Obter os dados que gerar uma tabela para de now castingDF
+
 library(geobr)
 library(sf)
 library(dplyr)

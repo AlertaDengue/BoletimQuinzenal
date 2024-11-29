@@ -28,7 +28,7 @@ df_dengue <- bind_rows(df_dengue) %>%
     incest = casos_est/pop * 100000,
     arbovirose = "Dengue"
   ) #%>% 
-  # filter(substr(SE, 1, 4) < 2024)
+  #filter(substr(SE, 1, 4) < 2024)
 se_max_dengue  <- max(df_dengue$SE) # Semana epidemiologia mais recente
 
 # file_list <- list.files(path = "../data/cases2024/", pattern = "dengue.parquet", full.names = TRUE)
@@ -50,8 +50,7 @@ df_chik <- bind_rows(df_chik) %>%
   mutate(
     incest = casos_est/pop * 100000,
     arbovirose = "Chikungunya"
-  ) %>% 
-   filter(SE != 202401)
+  )
 se_max_chik  <- max(df_chik$SE) # Semana epidemiologia mais recente
 
 # file_list <- list.files(path = "../data/cases2024/", pattern = "chik.parquet", full.names = TRUE)
@@ -72,8 +71,27 @@ se_max_chik  <- max(df_chik$SE) # Semana epidemiologia mais recente
 #   bind_rows(df_chik2)
 
 df_dengue_chik <- df_dengue %>% 
-  bind_rows(df_chik)
+  bind_rows(df_chik) %>% 
+  filter(SE != 202401)
 rm(df_dengue, df_chik)
+
+# df_macro_dengue_chik <- df_dengue_chik %>% 
+#   group_by(arbovirose, macroregional, macroregional_id, SE) %>% 
+#   reframe(
+#     casos_est = sum(casos_est, na.rm = T),
+#     casos = sum(casos_est, na.rm = T)
+#   )
+
+# save(df_macro_dengue_chik, file = "df_macro_dengue_chik.rds")
+
+# df_dengue_chik_agregado <- df_dengue_chik%>% 
+#   mutate(ano = substr(SE, 1, 4)) %>% 
+#   group_by(ano, municipio_geocodigo) %>% 
+#   reframe(
+#     casos = sum(casos, na.rm = T),
+#     casos_est = sum(casos_est, na.rm = T)
+#   )
+# save(df_dengue_chik_agregado, file = "df_dengue_chik_agregado.rds")
 
 shape <- st_read("shape/rs_450_RepCor1.shp") %>% 
   rename(regional_id = primary.id) %>% 

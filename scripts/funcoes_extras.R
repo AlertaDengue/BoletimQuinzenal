@@ -665,22 +665,14 @@ construir_tabela_incidencia_por_semana <- function(df, var = "inc"){
 
 
 gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
-  
-  # df <- tabela_tendencia_por_uf_inc_observada_dengue %>%
-  # left_join(tab_rt_uf %>% 
-  #             filter(arbovirose == "Dengue"),
-  #           by = "sigla") %>% 
-  #   relocate(Rtmean, .after = sigla) %>% 
-  #   dplyr::select(-arbovirose) %>% 
-  #   bind_cols(tabela_tendencia_por_uf_inc_estimada_dengue %>% 
-  #               dplyr::select(-c(regiao, sigla)))
+
   # df <- tab_tendencia_por_uf_inc_observada_dengue
   
   df <- df %>% 
     janitor::clean_names() %>% 
     tibble()
   
-  semana_labels <- colnames(df)[4:12] #[4:7]
+  semana_labels <- colnames(df)[5:12] #[4:7]
   semana_labels <- substr(semana_labels, 6, 7)
   
   colnames(df) <- c("Regiao", "UF", "Rt", "tendencia",
