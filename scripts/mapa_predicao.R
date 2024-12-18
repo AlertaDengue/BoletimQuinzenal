@@ -190,7 +190,7 @@ ggsave(filename = paste0("figuras/situacao_",weeknow,".png"))
 ## situacao prevista para as prox 3 semanas  
 
 # previsoes geradas pelo modelo de short term forecast (Eduardo gera)
-file = paste0("data/for_ensemble_",weeknow,".csv")
+file = paste0("data/for_ensemble_47.csv")
 short.pred <- read.csv(file) %>%
   mutate(se = epiweek(date)) 
 

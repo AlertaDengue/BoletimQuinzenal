@@ -1159,3 +1159,12 @@ texto_1 <- function(df, arbovirose){
   }
   return(texto)
 }
+
+# Função para baixar cada arquivo pelo ID
+baixar_arquivo <- function(file_id, path) {
+  file_info <- drive_get(as_id(file_id))
+  
+  local_path <- file.path(path, file_info$name)
+  
+  drive_download(as_id(file_id), path = local_path, overwrite = TRUE)
+}
