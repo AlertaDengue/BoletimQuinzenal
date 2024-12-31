@@ -17,16 +17,16 @@ options(scipen = 999)
 start_time <- Sys.time()
 
 # Baixar arquivos do google drive
-drive_auth(email = "estatistico.bianchi@gmail.com")
-
-## for_ensemble.csv
-for_ensemble_id <- as_id("1hdUPpGn7qiKLDoaW4DnzYzJnZqdbSjLF")
-drive_download(for_ensemble_id, path = "data/for_ensemble.csv", overwrite = T)
-
-## graficos do modelo ensemble
-figures_ensemble_id <- as_id("1aQW95MhLvFJffd0OAaJwa_8PE345uUFN")
-figures_ensemble_id <- googledrive::drive_ls(figures_ensemble_id)$id
-walk(figures_ensemble_id, baixar_arquivo, path = "report/figures")
+# drive_auth(email = "estatistico.bianchi@gmail.com")
+# 
+# ## for_ensemble.csv
+# for_ensemble_id <- as_id("1hdUPpGn7qiKLDoaW4DnzYzJnZqdbSjLF")
+# drive_download(for_ensemble_id, path = "data/for_ensemble.csv", overwrite = T)
+# 
+# ## graficos do modelo ensemble
+# figures_ensemble_id <- as_id("1aQW95MhLvFJffd0OAaJwa_8PE345uUFN")
+# figures_ensemble_id <- googledrive::drive_ls(figures_ensemble_id)$id
+# walk(figures_ensemble_id, baixar_arquivo, path = "report/figures")
 
 load(file = "data/muns.R") 
 muns <- muns %>% 
@@ -586,10 +586,10 @@ rmarkdown::render(input = "report/InfoDengue Informe.Rmd",
                   clean = T)
 
 # Fazer upload para a pasta especificada
-drive_upload(
-  media = output_file,
-  path = as_id("1vTwYA1imahduABbdXtUFtPvgFhcBvMFj"),
-  overwrite = T)
+# drive_upload(
+#   media = output_file,
+#   path = as_id("1vTwYA1imahduABbdXtUFtPvgFhcBvMFj"),
+#   overwrite = T)
 
 end_time <- Sys.time()
 end_time - start_time

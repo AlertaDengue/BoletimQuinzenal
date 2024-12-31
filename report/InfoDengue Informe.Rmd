@@ -351,10 +351,9 @@ Os dados provenientes dos sistemas de notificação de casos podem conter erros 
 
 <!-- Texto humano -->
 \begin{itemize}
-\item O país ainda permanece com padrão de crescimento de notificação de dengue e chikungunya, compatível com a temporalidade das arboviroses. 
-\item Em São Paulo a incidência estimada para o período atual é consideravelmente maior que a observada em 2023 para o mesmo período
-\item MT e GO estão com incidência estimada de dengue maior do que em 2023 para o mesmo período, e tendência de crescimento. 
-\item MT que apresenta aumento do número reprodutivo de casos de Chikungunya  e indicação de sustentação nesse aumento.
+\item Como era esperado, a notificação decaiu por conta das festividades. É esperado que o país esteja com padrão de crescimento de notificação de dengue de 3 a 10% por semana e chikungunya, 3 a 12% por semana, compatível com a temporalidade das arboviroses. 
+\item No final de 2023, já tínhamos RJ, AC, AM e DF acima do limiar epidêmico de dengue. No ano atual, todos essas UFs estão abaixo do limiar epidêmico. Por sua vez, são os estados do sul, RS e SC, que cruzaram o limiar epidêmico precocemente. 
+\item Quanto à chikungunya, ao final de 2023, vários estados já estavam acima do limiar epidêmico, com destaque para GO e MG. Esse ano, temos destaque para MT, MS e SP.  PR também com tendência de aumento.
 \end{itemize}
 
 \vspace{2cm}
@@ -367,14 +366,13 @@ Do total de casos notificados, `r prettyNum(total_casos_provaveis_ano_selecionad
 
 `r tabela_1`
 
-\newpage
 **Curvas de incidência e limiares epidêmicos para dengue e chikungunya no Brasil**
 
 Nas figuras 1 e 2 estão apresentadas as curvas de incidências e seus limiares epidêmicos para o Brasil para dengue e chikungunya, respectivamente. A curva em \textcolor{red}{\textbf{vermelho}} indica a incidência estimada no ano atual até a semana `r ultima_semana_dengue` enquanto a tracejada em \textcolor{dark_red}{\textbf{vermelho escuro}} a incidência observada. A linha tracejada em **preto** indica o limiar de incidência muito alta.
 
-A curva de casos notificados  de dengue segue mantendo tendência de aumento de casos desde a SE 44 até a SE atual (50), acima dos canais endêmicos. O número reprodutivo encontra-se estável em Rt = 1,2 nas últimas quatro semanas, indicando crescimento a uma taxa constante. A curva de casos notificados de chikungunya  que já vinha com um leve crescimento desde a SE 45 apresenta tendência de aumento mais acelerado desde a semana 46, com Rt = 1,25. Estima-se que esteja acima do canal endêmico desde a semana 41.  
+A curva de casos notificados  de dengue segue mantendo tendência de aumento de casos desde a SE 44 até a SE 51, acima dos canais endêmicos. Houve uma desaceleração na notificação, decorrente das festividades. O número reprodutivo encontra-se estável em Rt = 1,2 nas últimas quatro semanas, indicando crescimento a uma taxa constante. A curva de casos notificados de chikungunya  que já vinha com um leve crescimento desde a SE 45 apresentava tendência de aumento mais acelerado desde a semana 46, com Rt = 1,25. Estima-se que esteja acima do canal endêmico desde a semana 41. 
 
-```{r, fig.align="center", fig.width = 11, fig.height = 5}
+```{r, fig.pos='H', fig.align="center", fig.width = 11, fig.height = 5}
 get_map_mem_incidencia_br(
   df_uf_inc = df_dengue_nacional,
   df_uf_mem = memBR_dengue_chik %>% filter(arbovirose == "Dengue"),
@@ -383,8 +381,9 @@ get_map_mem_incidencia_br(
 )
 ```
 **Figura 1.** Curvas de nowcasting para incidência de dengue até a semana epidemiológica `r ultima_semana_dengue` e limiares epidêmicos.
+\FloatBarrier
 
-```{r, fig.align="center", fig.width = 12, fig.height = 5}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 5}
 get_map_mem_incidencia_br(
   df_uf_inc = df_chik_nacional,
   df_uf_mem = memBR_dengue_chik %>% filter(arbovirose == "Chikungunya"),
@@ -393,24 +392,23 @@ get_map_mem_incidencia_br(
 )
 ```
 **Figura 2.** Curvas de nowcasting para incidência de chikungunya até a semana epidemiológica `r ultima_semana_chik` e limiares epidêmicos.
+\FloatBarrier
 
-\newpage
 **Curvas de incidência e limiares epidêmicos para dengue por UF**
 
 As curvas de incidência dos casos suspeitos notificados e os casos estimados de acordo com o nowcast, por estado, são apresentadas na figura 3. A curva em \textcolor{red}{\textbf{vermelho}} indica a incidência estimada no ano atual até a semana `r ultima_semana_dengue` enquanto a tracejada em \textcolor{dark_red}{\textbf{vermelho escuro}} a incidência observada. A curva em \textcolor{blue}{\textbf{azul}} exibe os valores observados em 2023. A linha tracejada em **preto** indica o limiar de incidência muito alta.
 
-Na região Norte, AP com as maiores estimativas de incidência, apesar da queda brusca de notificação no SINAN. Essa discrepância entre modelo e observação pode refletir mudanças no padrão de notificação. PA e AM mantêm-se acima dos canais endêmicos, com tendência de estabilidade a leve crescimento, ambos bem abaixo do limiar epidêmico. TO também apresenta leve crescimento, atualmente próximo ao limite superior do canal endêmico. Demais estados com tendência de queda da curva de casos no momento.
+Na região Norte,  apenas o AC se mantem acima do limiar epidêmico, mas com padrão de estabilidade. Os demais estão estáveis ou em queda, mas pode decorrer das festividades. AP, PA e AM estavam acima dos canais endêmicos na semana passada.  
 
-Na região Nordeste, todos os estados com curvas de incidência estimada dentro ou próximas dos canais endêmicos, com a exceção da Bahia, que apresenta um crescimento da curva de casos mas com incidências relativamente baixas; e MA com aumento dos casos, mas dentro dos canais endêmicos, na SE 50.
+Na região Nordeste, a incidência é menor que 10 por 100.000 hab, em todos os estados. As curvas de incidência estimada estão dentro ou próximas dos canais endêmicos, com a exceção da Bahia, que apresentava (na semana passada) um crescimento da curva de casos mas com incidências relativamente baixas.
 
-No Centro-Oeste, segue a tendência de aumento das notificações em MT, GO e DF.  MT e GO estão com incidência estimada maior do que em 2023 e rápido crescimento. O DF apresenta incidência menor que em 2023, e crescimento mais lentos. Todos encontram-se abaixo do limiar epidêmico. 
+No Centro-Oeste, observa-se queda, mas havia tendência de aumento das notificações em MT, GO e DF no boletim anterior.  MT e GO estão com incidência estimada maior do que em 2023 e com risco de crescimento. O DF apresenta incidência menor que em 2023, e crescimento mais lento. Todos encontram-se abaixo do limiar epidêmico. 
 
-Na região Sudeste, é possível observar o crescimento das curvas em SP, MG e RJ. É importante notar que em SP a incidência estimada para o período atual é consideravelmente maior que a observada em 2023.  Todos estados com incidência acima do canal endêmico, porém abaixo do limiar epidêmico. Os dados do Espírito Santo não estão completos, por isso, não é possível interpretar. 
+Na região Sudeste, é possível observar o crescimento menor das curvas em SP, MG e RJ, mas pode decorrer das festividades. É importante notar que em SP a incidência estimada para o período atual é consideravelmente maior que a observada em 2023. Em RJ e MG, está significativamente menor. Todos estados com incidência acima do canal endêmico, porém abaixo do limiar epidêmico. Os dados do Espírito Santo não estão completos, por isso, não é possível interpretar. 
 
-No Sul, todos os estados apresentam padrão de crescimento. Santa Catarina mantém-se acima do limiar epidêmico de 20 casos por 100.000 hab, enquanto Rio Grande do Sul cruza o limiar epidêmico essa semana (4 casos por 100.000 hab). Ambos apresentam notificação de casos significativamente maior que em 2023. O Paraná está abaixo do limiar epidêmico do estado, que é mais alto (55 casos por 100.000 hab), e segue com crescimento na incidência estimada, com valores semelhantes a 2023.
+No Sul, todos os estados apresentam padrão de crescimento, apesar do decréscimo na última semana. Santa Catarina mantém-se acima do limiar epidêmico de 20 casos por 100.000 hab, enquanto Rio Grande do Sul deve manter acima do limiar epidêmico (4 casos por 100.000 hab). Ambos apresentam notificação de casos significativamente maior que em 2023. O Paraná está abaixo do limiar epidêmico do estado, que é mais alto (55 casos por 100.000 hab), e segue com crescimento na incidência estimada, com valores semelhantes a 2023.
 
-
-```{r, fig.align="center", fig.width = 11, fig.height = 12}
+```{r, fig.pos='H', fig.align="center", fig.width = 11, fig.height = 12}
 get_map_mem_incidencia(
   df_uf_inc = df_dengue_uf,
   df_uf_mem = memUFsazonal,
@@ -419,15 +417,17 @@ get_map_mem_incidencia(
 )
 ```
 **Figura 3.** Curvas de incidência e limiares epidêmicos para dengue até a semana epidemiológica `r ultima_semana_dengue`.
+\FloatBarrier
 
 \newpage
 **Curvas de incidência e limiares  epidêmicos para chikungunya por UF**
 
 Na figura 4 são exibidas, por estado, as curvas de incidência dos casos suspeitos notificados e os casos estimados de acordo com o nowcast. A curva em \textcolor{red}{\textbf{vermelho}} indica a incidência estimada no ano atual até a semana `r ultima_semana_dengue` enquanto a tracejada em \textcolor{dark_red}{\textbf{vermelho escuro}} a incidência observada. A curva em \textcolor{blue}{\textbf{azul}} exibe os valores observados em 2023. A linha tracejada em **preto** indica o limiar de incidência muito alta.
 
-Em todos os estados, as curvas de incidência de chikungunya seguem abaixo do observado no ano passado. A maioria encontra-se dentro do canal endêmico.  Todavia,  alguns estados possuem atividade crescente desse agravo, em particular no Centro-Oeste e Sudeste. No Centro-Oeste, os estados MS e MT têm incidência de chikungunya acima do limiar epidêmico e crescente. Em MS, observa-se um padrão de crescimento há cerca de 3 semanas. No Sudeste, SP e MG observam um aumento mais recente, sendo que SP ultrapassou o limiar epidêmico. 
+Em todos os estados, as curvas de incidência de chikungunya seguem abaixo do observado no ano passado, com exceção de MT que indica aumento. A maioria encontra-se dentro do canal endêmico.  Todavia,  alguns estados possuem atividade crescente desse agravo, em particular no Centro-Oeste e Sudeste. No Centro-Oeste, os estados MS e MT têm incidência de chikungunya acima do limiar epidêmico e crescente. No Sudeste, SP e MG observam um aumento mais recente, sendo que SP ultrapassou o limiar epidêmico. 
 
-```{r, fig.align="center", fig.width = 11, fig.height = 12}
+
+```{r, fig.pos='H', fig.align="center", fig.width = 11, fig.height = 12}
 get_map_mem_incidencia(
   df_uf_inc = df_chik_uf,
   df_uf_mem = memUFsazonal.chi,
@@ -436,13 +436,13 @@ get_map_mem_incidencia(
 )
 ```
 **Figura 4.** Curvas de incidência e limiares epidêmicos para chikungunya até a semana epidemiológica `r ultima_semana_chik`.
+\FloatBarrier
 
-\newpage
 **Picos de incidências por UF**
 
 Na figura 5 e 6 estão representadas os picos das incidências anuais de dengue e chikungunya, por unidade da federação. Os pontos \textcolor{gray}{\textbf{cinzas}} indicam os picos para os anos anteriores (2010 a 2023), o ponto \textcolor{red}{\textbf{vermelho}} indica o pico em 2024 e o ponto \textcolor{orange}{\textbf{laranja}} a incidência na semana `r ultima_semana_dengue`.
 
-```{r, fig.align="center", fig.width = 12, fig.height = 9}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 9}
 df_dengue_chik_estados <- df_dengue_chik %>% 
   dplyr::select(arbovirose, SE, municipio_geocodigo, casos, pop) %>%
   mutate(
@@ -528,12 +528,13 @@ frase_dengue_1 <- texto_1(dengue_semana_epidemica_estados, arbovirose = "dengue"
 
 `r frase_dengue_1`
 
-```{r, fig.align="center", fig.width = 12, fig.height = 4}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 4}
 df_dengue_chik_estados %>% 
   filter(arbovirose == "Dengue") %>% 
   gg_timeline_dots()
 ```
 **Figura 5.** Pico da incidência por 100 mil habitantes sobre os casos notificados de dengue até a semana `r ultima_semana_dengue`.
+\FloatBarrier
 
 ```{r}
 chik_semana_epidemica_estados <- semana_epidemica_dengue_chik_estados %>% 
@@ -546,29 +547,30 @@ frase_chik_1 <- texto_1(chik_semana_epidemica_estados, arbovirose = "chikungunya
 
 `r frase_chik_1`
 
-```{r, fig.align="center", fig.width = 12, fig.height = 4}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 4}
 df_dengue_chik_estados %>% 
   filter(arbovirose == "Chikungunya") %>% 
   gg_timeline_dots()
 ```
 **Figura 6.** Pico da incidência por 100 mil habitantes sobre os casos notificados de chikungunya até a semana `r ultima_semana_dengue`.
+\FloatBarrier
 
 \newpage
 **Análise de tendência de crescimento de casos de dengue**
 
 A tabela 2 apresenta um panorama sobre a tendência da incidência de dengue para casos notificados e estimados em todo o país até a semana `r ultima_semana_dengue`. As **setas** indicam se os casos estão crescendo ou decrescendo significativamente.
 
-**Norte:** Cinco estados apresentam número reprodutivo maior que 1, indicando tendência de crescimento de casos (AC, AM, RO, TO e PA). As maiores taxas de crescimento ocorrem no AC (Rt=1,27) e TO (Rt=1,16), porém são valores baixos a moderados. Em termos de incidência estimada, os maiores valores são encontrados no AC e AP, mas com uma ligeira queda na última semana . 
+**Norte:** Na semana anterior, quatro estados apresentavam número reprodutivo ligeiramente maior que 1, indicando leve tendência de crescimento de casos (AM, RO, TO e PA). Atualmente encontram-se acima de 1, no AC. Em termos de incidência estimada, os maiores valores são encontrados no AC. 
 
-**Nordeste:** Apenas dois estados apresentam número reprodutivo maior que 1 (RN e BA), sendo maior na Bahia (Rt = 1,33). Todos os estados apresentam baixas incidências estimadas para o momento atual.  
+**Nordeste:** Apenas Bahia mantém uma tendência moderada de aumento de casos. Embora o valor atual seja baixo, notar que foi moderado na semana anterior (Rt = 1,32), sugerindo subnotificação. Todos os estados apresentam baixas incidências estimadas para o momento atual.  
 
-**Centro-Oeste:** Todas as quatro unidades com número reprodutivo maior que 1. Os maiores valores ocorrem em GO e MT. As maiores incidências ocorrem em GO e DF . A associação de incidência mais alta e tendência de crescimento é indicação de alerta na região.
+**Centro-Oeste:** Apesar de todos estarem com Rt <1, na semana anterior estavam com número reprodutivo maior que 1. Os maiores valores ocorreram em GO e MT. As maiores incidências ocorrem em GO e DF . A associação de incidência mais alta e tendência de crescimento é indicação de alerta na região.
 
-**Sudeste:** MG (Rt=1,23) SP  (Rt=1,21) e RJ  (Rt=1,10) com números reprodutivos acima de 1. As incidências estimadas mais altas são as de SP e MG, com crescimento observado nas últimas 4 semanas.  ES sem dados.  
+**Sudeste:** Apenas SP com tendência clara de aumento, Rt = 1,26 na semana anterior e Rt = 1,1 nessa semana. Os demais com ligeiros aumentos. As incidências estimadas mais altas são as de SP e MG, com crescimento observado nas últimas 4 semanas.  ES com dados incompletos. 
 
-**Sul:** Todos os estados com  número reprodutivo maior que 1, porém de crescimento leve. O maior valor ocorre no RS (Rt = 1,11). Incidências estimadas em SC e PR altas, mas em SC observa-se uma ligeira queda na última semana. Acompanhar.
+**Sul:** Na semana anterior, todos os estados estavam com  número reprodutivo maior que 1, porém de crescimento leve. O maior valor ocorreu no RS (Rt = 1,11). Incidências estimadas em SC e PR altas, mas em SC observa-se uma ligeira queda na última semana. 
 
-
+\newpage
 **Tabela 2.** Situação dos estados em relação à notificação dos casos de dengue em 2024.
 ```{r}
 tabela_dengue_uf <- memUFanual %>%
@@ -693,26 +695,28 @@ n_regionais_incidencia_dengue_baixo <- shape_dengue %>% filter(status == "Baixo 
 
 De acordo com a figura 7, do total de 450 regionais, `r n_regionais_incidencia_dengue_alto_em_subida` estão com alta incidência e continuam subindo, `r n_regionais_incidencia_dengue_alto_estavel` estão com alta, porém estável, `r n_regionais_incidencia_dengue_alto_em_queda` estão com alta, mas em queda e `r n_regionais_incidencia_dengue_baixo` estão com baixa ou moderada incidência de dengue.
 
-```{r, fig.align="center", fig.width = 12, fig.height = 12}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 12}
 gg_map_risco_classif_dengue
 ```
 **Figura 7.** Regionais de saúde que a incidência de dengue esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
+\FloatBarrier
 
 \newpage
 **Análise de tendência de crescimento de casos de chikungunya**
 
 A tabela 3 apresenta um panorama sobre a tendência da incidência de chikungunya para casos notificados e estimados em todo o país até a semana `r ultima_semana_chik`. As **setas** indicam se os casos estão crescendo ou decrescendo significativamente.
 
-**Norte:** AP, TO e AC apresentam número reprodutivo maior que 1, indicando leve tendência de crescimento de caso, mas com baixas incidências no momento. 
+**Norte:** AP estava com número reprodutivo de 2, mas houve forte queda. Podem ser flutuações numéricas, mas ainda assim, requer atenção. 
 
-**Nordeste:** MA, PI e BA com números reprodutivos ligeiramente maiores que 1, mas sem indicativo de sustentação. Considerando as baixas incidências, não reconhecemos como preocupação. 
+**Nordeste:** MA estava com Rt = 1,39, na semana passada e mantem valores acima de 1, indica atenção. Considerando as baixas incidências, não reconhecemos como preocupação no Nordeste. 
 
-**Centro-Oeste:** Observar MT que apresenta Rt = 2, sendo uma forte aceleração em relação ao observado anteriormente. 
+**Centro-Oeste:** Observar MT que apresentava Rt = 2 e agora Rt = 1,41, mantendo uma forte aceleração em relação ao observado anteriormente. 
 
-**Sudeste:** Todos os estados com Rt>1, com maiores taxas em SP e MG, com Rt = 1,33. 
+**Sudeste:** Todos os estados com Rt>1, com maiores taxas em SP e MG, com Rt = 1,23 e 1,13, respectivamente. 
 
-**Sul:** PR com Rt>2, porém com incidência  baixa.
+**Sul:** PR mantem Rt>1,7, requer atenção.
 
+\newpage
 **Tabela 3.** Situação dos estados em relação à notificação dos casos de chikungunya em 2024.
 ```{r}
 tabela_tendencia_por_uf_inc_observada_chik <- df_chik_uf %>% 
@@ -775,10 +779,11 @@ n_regionais_incidencia_chik_baixo <- shape_chik %>% filter(status == "Baixo ou m
 
 Conforme a figura 8, do total de 450 regionais, `r n_regionais_incidencia_chik_alto_em_subida` estão com alta incidência e continuam subindo, `r n_regionais_incidencia_chik_alto_estavel` estão com alta, porém estável, `r n_regionais_incidencia_chik_alto_em_queda` estão com alta, mas em queda e `r n_regionais_incidencia_chik_baixo` estão com baixa ou moderada incidência de chikungunya
 
-```{r, fig.align="center", fig.width = 12, fig.height = 14}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 14}
 gg_map_risco_classif_chik
 ```
 **Figura 8.** Regionais de saúde que a incidência de chikungunya esta em tendência de alta em subida (vermelho), alto estável (laranja), alto em queda (amarelo) e baixo ou moderado (verde).
+\FloatBarrier
 
 \newpage
 \textbf{Comparação da incidência atual de dengue por UF com as previstas pelos modelos de previsão de temporada}
@@ -791,31 +796,34 @@ O modelo ensemble 23 foi calibrado com o cenário epidemiológico de 2023, enqua
 
 A figura abaixo mostra o esperado para toda a temporada, de acordo com cada modelo: (A) incidência acumulada de casos prováveis de dengue em toda a temporada, segundo o modelo 2023; (B) o mesmo, considerando o modelo 2024; (C)  cada faixa vertical liga os valores médios de cada modelo. Medidas de incerteza não são mostradas nessa figura. Observa-se que os modelos indicam um ano epidêmico (> 300 casos por 100.000 hab) na maioria dos estados. Contudo os valores previstos de incidência são menores do que os observados em 2024, na maioria dos estados (https://zenodo.org/records/13929005).
 
-```{r, fig.align="center", fig.width = 12, fig.height = 14}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 14}
 combined_plots123
 ```
 **Figura 9.** Previsão para a temporada 2024/25.
+\FloatBarrier
 
 A figura abaixo mostra o número de casos prováveis e a incidência acumulada estimada de dengue (casos prováveis) desde o início da temporada, isso é, semana `r ultima_semana_dengue` até a atual.  Para o cálculo dos casos prováveis, aplica-se um fator de correção aos casos totais notificados. O fator é calculado com base na proporção de definidos como casos prováveis nos últimos seis meses, excluindo-se as últimas dez semanas. Além disso, a incidência estimada é corrigida utilizando nowcast. 
 
-Observa-se que, em termos absolutos, a maior frequência de casos é registrada no estado de SP, seguido de PR, SC e GO (Fig A).  Em termos relativos à população, o maior risco está concentrado no AC, AP, além dos acima mencionados. A Figura C compara a incidência acumulada até o momento com o previsto pelos modelos ensemble. Em quase todos, a incidência está menor ou dentro do previsto. As exceções são: AP, SC e DF que estão acima do esperado, mas dentro da faixa de incerteza dos modelos. No nordeste, CE e PB também aparecem com incidência um pouco acima do esperado.
+Observa-se que, em termos absolutos, a maior frequência de casos na temporada foi registrada no estado de SP, seguido de PR, SC e GO, um padrão que se mantem nas ultimas semanas (Fig A).  Em termos relativos à população, o maior risco está concentrado no AC, AP, além dos acima mencionados. A Figura C compara a incidência acumulada até o momento com o previsto pelos modelos ensemble. Em quase todos, a incidência está menor ou dentro do previsto. As exceções são:  AP e DF que estão acima do esperado, mas dentro da faixa de incerteza dos modelos.  
 
-```{r, fig.align="center", fig.width = 12, fig.height = 14}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 14}
 combined_plots456
 ```
 **Figura 10.** (A) Número estimado de casos prováveis, (B) incidência acumulada; e (C) Casos prov[aveis estimados de dengue.
+\FloatBarrier
 
 \newpage
 \textbf{Previsão para as próximas 3 semanas}
 
 Para gerar predições de curto prazo, são treinados semanalmente três modelos de predição: o primeiro é baseado em redes neurais LSTM, o segundo utiliza processos gaussianos, e o último é um modelo ARIMA não sazonal e univariado. Esses modelos foram aplicados aos casos prováveis a nível de Unidade da Federação (UF) no Brasil, sendo treinado um modelo para cada UF e outro para o Brasil como um todo.
 
-A figura 11 mostra as previsões para as próximas 3 semanas (Semanas 51 a 53). Em termos de incidência, o maior risco encontra-se em SP e MG, seguido de AC, GO. Em termos de total de casos no período (Fig B), espera-se menos do que o previsto nos modelos ensembles de temporada, em quase todos os estados. SP aparece com estimativa dentro do esperado pelos forecasts e DF com notificações acima do esperado.
+A figura 11 mostra as previsões para as próximas 3 semanas. Em termos de incidência, o maior risco encontra-se em SP e MG, seguido de AC, GO e MT. Em termos de total de casos no período (Fig B), espera-se menos do que o previsto nos modelos ensembles de temporada, em quase todos os estados. SP e SP e DF aparecem com estimativas entre o esperado pelos dois forecasts.  
 
-```{r, fig.align="center", fig.width = 12, fig.height = 14}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 14}
 combined_plot78
 ```
 **Figura 11.** Previsões para as próximas 3 semanas.
+\FloatBarrier
 
 As figuras abaixo mostram as curvas de incidência observadas e preditas para cada UF. O painel à esquerda apresenta um zoom com o objetivo de destacar as previsões de curto prazo, enquanto o painel à direita foca em comparar a tendência de curto prazo prevista com as tendências projetadas pelos modelos de ensemble de longo prazo propostos. Importante ressaltar que a figura à esquerda representa um “zoom” da imagem à direita.
 
