@@ -17,7 +17,7 @@ options(scipen = 999)
 start_time <- Sys.time()
 
 # Baixar arquivos do google drive
-# drive_auth()
+drive_auth(email = "estatistico.bianchi@gmail.com")
 
 ## for_ensemble.csv
 for_ensemble_id <- as_id("1hdUPpGn7qiKLDoaW4DnzYzJnZqdbSjLF")
@@ -586,7 +586,10 @@ rmarkdown::render(input = "report/InfoDengue Informe.Rmd",
                   clean = T)
 
 # Fazer upload para a pasta especificada
-drive_upload(media = output_file, path = as_id("1vTwYA1imahduABbdXtUFtPvgFhcBvMFj"))
+drive_upload(
+  media = output_file,
+  path = as_id("1vTwYA1imahduABbdXtUFtPvgFhcBvMFj"),
+  overwrite = T)
 
 end_time <- Sys.time()
 end_time - start_time

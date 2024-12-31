@@ -372,7 +372,7 @@ Do total de casos notificados, `r prettyNum(total_casos_provaveis_ano_selecionad
 
 Nas figuras 1 e 2 estão apresentadas as curvas de incidências e seus limiares epidêmicos para o Brasil para dengue e chikungunya, respectivamente. A curva em \textcolor{red}{\textbf{vermelho}} indica a incidência estimada no ano atual até a semana `r ultima_semana_dengue` enquanto a tracejada em \textcolor{dark_red}{\textbf{vermelho escuro}} a incidência observada. A linha tracejada em **preto** indica o limiar de incidência muito alta.
 
-A curva de notificação de dengue, ao nível de país, segue mantendo o padrão acima do diagrama de controle, com leve tendência de aumento desde a semana 44, atingindo um máximo de transmissão na semana 47 (Rt = 1,14) e uma desaceleração nas últimas 2 semanas. A chikungunya apresenta tendência de aumento desde a semana 46 (Rt entre 1,1 e 1,26) e estima-se que esteja acima do canal endêmico desde a semana 41. 
+A curva de casos notificados  de dengue segue mantendo tendência de aumento de casos desde a SE 44 até a SE atual (50), acima dos canais endêmicos. O número reprodutivo encontra-se estável em Rt = 1,2 nas últimas quatro semanas, indicando crescimento a uma taxa constante. A curva de casos notificados de chikungunya  que já vinha com um leve crescimento desde a SE 45 apresenta tendência de aumento mais acelerado desde a semana 46, com Rt = 1,25. Estima-se que esteja acima do canal endêmico desde a semana 41.  
 
 ```{r, fig.align="center", fig.width = 11, fig.height = 5}
 get_map_mem_incidencia_br(
@@ -425,7 +425,7 @@ get_map_mem_incidencia(
 
 Na figura 4 são exibidas, por estado, as curvas de incidência dos casos suspeitos notificados e os casos estimados de acordo com o nowcast. A curva em \textcolor{red}{\textbf{vermelho}} indica a incidência estimada no ano atual até a semana `r ultima_semana_dengue` enquanto a tracejada em \textcolor{dark_red}{\textbf{vermelho escuro}} a incidência observada. A curva em \textcolor{blue}{\textbf{azul}} exibe os valores observados em 2023. A linha tracejada em **preto** indica o limiar de incidência muito alta.
 
-As curvas de incidências estimadas para chikungunya na SE 49, em todo o país, estão abaixo do observado no ano de 2023. Ainda assim, observa-se um padrão de atividade aumentada, acima do limiar epidêmico, no MS, que se mantém desde a temporada anterior. Em SP e MG, observa-se um aumento mais recente, sendo que SP está com alerta por passar o limiar epidêmico. O modelo indicou crescimento súbito da curva de casos estimados no MT, na última semana, a acompanhar, podem ser mudanças no padrão de notificação ou instabilidade do modelo. 
+Em todos os estados, as curvas de incidência de chikungunya seguem abaixo do observado no ano passado. A maioria encontra-se dentro do canal endêmico.  Todavia,  alguns estados possuem atividade crescente desse agravo, em particular no Centro-Oeste e Sudeste. No Centro-Oeste, os estados MS e MT têm incidência de chikungunya acima do limiar epidêmico e crescente. Em MS, observa-se um padrão de crescimento há cerca de 3 semanas. No Sudeste, SP e MG observam um aumento mais recente, sendo que SP ultrapassou o limiar epidêmico. 
 
 ```{r, fig.align="center", fig.width = 11, fig.height = 12}
 get_map_mem_incidencia(
