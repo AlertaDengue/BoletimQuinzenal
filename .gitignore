@@ -11,6 +11,9 @@
 *.xls
 *.csv
 
+# Other files
+*.pdf
+
 # User-specific files
 .Ruserdata
 

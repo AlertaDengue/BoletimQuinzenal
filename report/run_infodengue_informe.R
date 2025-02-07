@@ -17,16 +17,16 @@ options(scipen = 999)
 start_time <- Sys.time()
 
 # Baixar arquivos do google drive
-# drive_auth(email = "estatistico.bianchi@gmail.com")
-# 
+drive_auth(email = "estatistico.bianchi@gmail.com")
+
 # ## for_ensemble.csv
-# for_ensemble_id <- as_id("1hdUPpGn7qiKLDoaW4DnzYzJnZqdbSjLF")
-# drive_download(for_ensemble_id, path = "data/for_ensemble.csv", overwrite = T)
-# 
+for_ensemble_id <- as_id("1hdUPpGn7qiKLDoaW4DnzYzJnZqdbSjLF")
+drive_download(for_ensemble_id, path = "data/for_ensemble.csv", overwrite = T)
+
 # ## graficos do modelo ensemble
-# figures_ensemble_id <- as_id("1aQW95MhLvFJffd0OAaJwa_8PE345uUFN")
-# figures_ensemble_id <- googledrive::drive_ls(figures_ensemble_id)$id
-# walk(figures_ensemble_id, baixar_arquivo, path = "report/figures")
+figures_ensemble_id <- as_id("1aQW95MhLvFJffd0OAaJwa_8PE345uUFN")
+figures_ensemble_id <- googledrive::drive_ls(figures_ensemble_id)$id
+walk(figures_ensemble_id, baixar_arquivo, path = "report/figures")
 
 load(file = "data/muns.R") 
 muns <- muns %>% 
@@ -43,6 +43,8 @@ df_dengue <- bind_rows(df_dengue) %>%
   ) #%>% 
 #filter(substr(SE, 1, 4) < 2024)
 se_max_dengue  <- max(df_dengue$SE) # Semana epidemiologia mais recente
+ultima_semana_inicio <- ymd(substr(max(df_dengue$data_iniSE, na.rm = T), 1, 10))
+ultima_semana_fim <- ultima_semana_inicio + 6
 
 # file_list <- list.files(path = "../data/cases2024/", pattern = "dengue.parquet", full.names = TRUE)
 # df_dengue2 <- lapply(file_list, read_parquet)
@@ -122,11 +124,6 @@ ano_selecionado <- year(Sys.Date())
 ultima_semana_dengue <- as.numeric(substr(se_max_dengue, 5, 6))
 ultima_semana_chik <- substr(se_max_chik, 5, 6)
 
-ultima_semana_inicio <- SE2date(se_max_dengue)$ini
-ultima_semana_fim <- ultima_semana_inicio + 6
-ultima_semana_inicio <- paste0(substr(ultima_semana_inicio, 9, 10),"/", substr(ultima_semana_inicio, 6, 7), "/", substr(ultima_semana_inicio, 1, 4))
-
-ultima_semana_fim <- paste0(substr(ultima_semana_fim, 9, 10),"/", substr(ultima_semana_fim, 6, 7), "/", substr(ultima_semana_fim, 1, 4))
 
 # Ensemble
 # df_essemble <- read.table(gzfile("data/ensemble_bayes_2025.csv.gz"), sep = ",", header = T) 
@@ -575,22 +572,31 @@ combined_plot78 <- m7 + m8 +
 
 # RUN
 output_directory <- paste0("report/outputs/")
-output_filename <- paste0("Informe_Infodengue_SE", se_max_dengue,".pdf")
+output_filename <- paste0("Informe_Infodengue_SE", se_max_dengue)
 
 gc(reset = T)
 dir.create(output_directory, recursive = T)
 
 output_file = paste0(output_directory, output_filename)
-rmarkdown::render(input = "report/InfoDengue Informe.Rmd",
+# .pdf
+rmarkdown::render(input = "report/InfoDengue Informe_pdf.Rmd",
                   output_file = output_file,
+                  output_format = "pdf_document",
+                  clean = T)
+
+# .docx
+rmarkdown::render(input = "report/InfoDengue Informe_docx.Rmd",
+                  output_file = output_file,
+                  output_format = "word_document",
                   clean = T)
 
 # Fazer upload para a pasta especificada
-# drive_upload(
-#   media = output_file,
-#   path = as_id("1vTwYA1imahduABbdXtUFtPvgFhcBvMFj"),
-#   overwrite = T)
+# drive_get('Informe Infodengue/boletins')$id[1]
+drive_upload(
+  media = paste0(output_file, ".pdf"),
+  path = as_id("1gFVYW5oCkKc5WQ8FVikKaGRrv_1lT-tR"),
+  overwrite = T)
+
 
 end_time <- Sys.time()
 end_time - start_time
-

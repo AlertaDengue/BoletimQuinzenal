@@ -718,6 +718,12 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
       style = list(cell_fill(color = "#ebebeb"), cell_text(weight = "bold")),
       locations = cells_row_groups()
     ) %>% 
+    tab_style(
+      style = list(
+        cell_text(size = px(8)) # Reduz o tamanho da fonte para 10px
+      ),
+      locations = cells_body()
+    ) %>% 
     fmt_number(
       columns = c(5:12), #4:7, 9:12
       decimals = 1
@@ -830,98 +836,127 @@ gerar_tabela_tendencia_uf <- function(df){
   return(tabela)
 }
 
-gerar_tabela_tendencia_macro <- function(df){
+# gerar_tabela_tendencia_macro <- function(df){
+#   
+#   df <- tabela_dengue_chik_macro %>%
+#     filter(arbovirose == "Dengue")
+#   
+#   df <- df %>% 
+#     dplyr::select(-arbovirose) %>% 
+#     tibble() %>%
+#     arrange(regiao) %>%
+#     group_by(regiao) %>%
+#     mutate(
+#       show_estado = if_else(row_number() > 1 & estado == lag(estado), "", estado),
+#       Rtmean = round(Rtmean, 2)
+#       ) %>% 
+#     ungroup()
+#   
+#   tabela <- df %>%
+#     dplyr::select(-c(show_estado)) %>% 
+#     gt(groupname_col = "regiao") %>%
+#     cols_label(
+#       regiao = md("**Região**"),
+#       estado = md("**Estado**"),
+#       macroregional = md("**Macroregional**"),
+#       Rtmean = md("**Rt**"),
+#       tendencia = md("**Tendência**")
+#     ) %>%
+#     cols_align(align = "center") %>% 
+#     tab_style(
+#       style = list(cell_fill(color = "#bfbfbf"), cell_text(weight = "bold")),
+#       locations = cells_column_labels()
+#     ) %>%
+#     tab_style(
+#       style = list(cell_fill(color = "#dbdbdb"), cell_text(weight = "bold")),
+#       locations = cells_row_groups()
+#     ) %>%
+#     fmt_number(
+#       columns = c(5), # Ajuste conforme necessário
+#       decimals = 2
+#     ) %>%
+#     text_transform(
+#       locations = cells_body(columns = c(estado)),
+#       fn = function(x) df$show_estado
+#     ) %>% 
+#     tab_style(
+#       style = cell_borders(
+#         sides = c("top", "bottom"),
+#         color = "black",
+#         weight = px(2)
+#       ),
+#       locations = cells_row_groups()
+#     ) %>%
+#     tab_style(
+#       style = cell_borders(
+#         sides = "bottom",
+#         color = "black",
+#         weight = px(3)
+#       ),
+#       locations = cells_body(rows = nrow(df))
+#     ) %>%
+#     tab_style(
+#       style = cell_borders(
+#         sides = "top",
+#         color = "black",
+#         weight = px(3)
+#       ),
+#       locations = cells_column_labels()
+#     ) %>%
+#     tab_style(
+#       style = cell_text(weight = "bold"),
+#       locations = cells_column_labels()
+#     ) %>%
+#     tab_style(
+#       style = list(cell_text(weight = "bold")),
+#       locations = cells_row_groups()
+#     ) %>% 
+#     tab_style(
+#       style = list(
+#         cell_text(size = px(8)) # Reduz o tamanho da fonte para 10px
+#       ),
+#       locations = list(cells_body(), cells_row_groups(), cells_column_labels())
+#     ) %>%
+#     tab_options(
+#       data_row.padding = px(2),
+#       table.font.size = px(10)
+#     )
+#   
+#   
+#   return(tabela)
+# }
+
+gerar_tabela_tendencia_macro <- function(df, filter_arbo = "Dengue") {
   
-  df <- df %>% 
-    tibble() %>%
-    arrange(regiao, arbovirose) %>%
-    group_by(regiao, arbovirose) %>%
+    # df <- tabela_dengue_chik_macro
+  #     filter(arbovirose == "Dengue")
+  
+  df <- df %>%
+    filter(arbovirose == filter_arbo) %>%
+    arrange(regiao) %>%
+    group_by(regiao) %>%
     mutate(
-      show_arbovirose = if_else(row_number() == 1, arbovirose, ""),
-      show_estado = if_else(row_number() > 1 & estado == lag(estado), "", estado)
-      ) %>% 
-    ungroup()
+      show_estado = if_else(row_number() > 1 & estado == lag(estado), "", estado),
+      Rtmean = round(Rtmean, 2)
+    ) %>%
+    ungroup() %>% 
+    relocate(show_estado, .after = "estado") %>% 
+    dplyr::select(-c(estado, arbovirose))
+
   
   tabela <- df %>%
-    dplyr::select(-c(show_arbovirose, show_estado)) %>% 
-    gt(groupname_col = "regiao") %>%
-    cols_label(
-      regiao = md("**Região**"),
-      arbovirose = "",
-      estado = md("**Estado**"),
-      macroregional = md("**Macroregional**"),
-      Rtmean = md("**Rt**"),
-      tendencia = md("**Tendência**")
-    ) %>%
-    cols_align(align = "center") %>% 
-    tab_style(
-      style = list(cell_fill(color = "#bfbfbf"), cell_text(weight = "bold")),
-      locations = cells_column_labels()
-    ) %>%
-    tab_style(
-      style = list(cell_fill(color = "#dbdbdb"), cell_text(weight = "bold")),
-      locations = cells_row_groups()
-    ) %>%
-    fmt_number(
-      columns = c(5), # Ajuste conforme necessário
-      decimals = 2
-    ) %>%
-    text_transform(
-      locations = cells_body(columns = c(arbovirose)),
-      fn = function(x) df$show_arbovirose
-    ) %>% 
-    text_transform(
-      locations = cells_body(columns = c(estado)),
-      fn = function(x) df$show_estado
-    ) %>% 
-    tab_style(
-      style = list(cell_fill(color = "#ebebeb")),
-      locations = cells_body(
-        rows = arbovirose == "Chikungunya"
-      )
-    ) %>%
-    tab_style(
-      style = list(cell_text(align = "left")),
-      locations = cells_body(columns = c(arbovirose))
-    ) %>% 
-    tab_style(
-      style = cell_borders(
-        sides = c("top", "bottom"),
-        color = "black",
-        weight = px(2)
-      ),
-      locations = cells_row_groups()
-    ) %>%
-    tab_style(
-      style = cell_borders(
-        sides = "bottom",
-        color = "black",
-        weight = px(3)
-      ),
-      locations = cells_body(rows = nrow(df))
-    ) %>%
-    tab_style(
-      style = cell_borders(
-        sides = "top",
-        color = "black",
-        weight = px(3)
-      ),
-      locations = cells_column_labels()
-    ) %>%
-    tab_style(
-      style = cell_text(weight = "bold"),
-      locations = cells_column_labels()
-    ) %>%
-    tab_style(
-      style = list(cell_text(weight = "bold")),
-      locations = cells_row_groups()
-    ) %>% 
-    as_latex()
-  
+    kable("latex", booktabs = TRUE, 
+          col.names = c("Região",
+                        "Estado", 
+                        "Macrorregional",
+                        "Rt",
+                        "Tendência"),
+          longtable = TRUE, align = "c") %>%
+    kable_styling(latex_options = c("repeat_header", "hold_position"), font_size = 8) %>%
+    row_spec(0, bold = T, background = "#d1e2f2", color = "black")
   
   return(tabela)
 }
-
 
 gerar_grafico_inc <- function(df){
   
@@ -951,17 +986,18 @@ gerar_grafico_inc <- function(df){
   return(chart)
 }
 
-get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se = 52){
+get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se = 52, se_ahead = 0){
   
   # df_uf_inc = df_dengue_uf
   # df_uf_mem = memUFsazonal
   # df_limiar_mem = memUFanual
+  # max_se = ultima_semana_dengue
   max_se = as.numeric(max_se)
   
   df_mem_uf_sazonal <- df_uf_mem %>% 
     rename(semana = SEe) %>% 
     dplyr::select(sigla, semana, preseason, epidemic, posseason) %>% 
-    filter(semana >= (max_se - 10) & semana <= (max_se + 5))
+    filter(semana >= (max_se - 10) & semana <= (max_se + se_ahead))
   
   df_uf_ano_anterior <- df_uf_inc %>%
     filter(ano == max(ano, na.rm = T) - 1) %>% 
@@ -971,7 +1007,7 @@ get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se =
       semana = as.numeric(semana),
       id = paste(codigo, semana, sep = "_")
     ) %>% 
-    filter(semana >= (max_se - 10) & semana <= (max_se + 5)) 
+    filter(semana >= (max_se - 10) & semana <= (max_se + se_ahead)) 
   
   df_uf_ano_atual <- df_uf_inc %>%
     filter(ano == max(ano, na.rm = T)) %>% 
@@ -981,7 +1017,7 @@ get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se =
       semana = as.numeric(semana),
       id = paste(codigo, semana, sep = "_")
     ) %>% 
-    filter(semana >= (max_se - 10) & semana <= (max_se + 5)) %>% 
+    filter(semana >= (max_se - 10) & semana <= (max_se + se_ahead)) %>% 
     dplyr::select(-c(codigo, semana))
   
   df_uf <- df_uf_ano_anterior %>% 
