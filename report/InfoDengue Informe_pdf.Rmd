@@ -287,6 +287,13 @@ tabela_1 <- data.frame(
   row_spec(0, bold = T, background = "#d1e2f2", color = "black")
 ```
 
+```{r}
+# Obter rt nacional
+df_rt_dengue_br <- obter_rt_nacional(df_dengue_chik, arbo = "Dengue")
+df_rt_chik_br <- obter_rt_nacional(df_dengue_chik, arbo = "Chikungunya")
+```
+
+
 <!-- \newgeometry{top=20mm, left=10mm, bottom=20mm}  -->
 <!-- \pagecolor{UoDDarkBlue}\afterpage{\nopagecolor} -->
 
@@ -313,12 +320,14 @@ tabela_1 <- data.frame(
 \textbf{INFORME INFODENGUE}
 
 ```{r}
+ultima_semana_dengue_formatado <- format(ultima_semana_fim, format = "%d/%m/%Y")
+
 titulo_relatorio <- paste0("Informe da situação das arboviroses urbanas no Brasil (Semana epidemiológica ", ultima_semana_dengue, ")")
 ```
 
 \textbf{`r titulo_relatorio`}
 
-\textit{Análises com base nos dados inseridos no SINAN ONLINE até o dia `r ultima_semana_fim`.}
+\textit{Análises com base nos dados inseridos no SINAN ONLINE até o dia `r ultima_semana_dengue_formatado`.}
 
 \vspace{2cm}
 \textbf{AVISOS:}
@@ -349,12 +358,12 @@ Os dados provenientes dos sistemas de notificação de casos podem conter erros 
 
 <!-- Texto humano -->
 \begin{itemize}
-\item A notificação de dengue no país cresce com um número reprodutivo de 1,6 [1,4-1,7]. Se esse crescimento se mantiver até as semanas 13 a 15 (pico típico no país), podemos esperar entre 3,5 e 4,8 milhões de casos de dengue nessa temporada (semana 41 de 2024 a semana 40 de 2025). Esse número pode mudar em função de eventos que acelerem ou reduzam a transmissão.  Em relação à chikungunya, com número reprodutivo semelhante, calcula-se entre 120 e 350 mil casos na temporada. 
-\item Estão acima do limiar epidêmico para dengue (método Infodengue): Norte - AC, AM, AP, PA; Centro-Oeste - MT; Sudeste - SP, MG, RJ, ES; Sul - SC e RS.  Em relação à chikungunya, estão acima do limiar:  Norte - AC, AP; Centro-Oeste: MT, MS, GO; Sudeste: MG e SP; Sul: PR.
-\item A nível de regiões de saúde, tem-se 17 regiões em alerta para dengue, por estarem acima do limiar epidêmico e com tendência de aumento acima da média nacional. Dessas, 13 estão em SP e MG, 2 em MT, 1 em PA e AC. Em MG e SP, esse aumento coincide com a presença crescente de DENV-3. Em relação à chikungunya, são 6 regiões, 3 em MT, 1 em MS, 1 em MG e 1 em AP.
+\item A notificação de dengue no país `r ifelse(df_rt_dengue_br$Rt, "cresce", "diminui")` com um número reprodutivo de `r paste(df_rt_dengue_br$Rt, "[",df_rt_dengue_br$lwr, df_rt_dengue_br$upr,"]")`. Se esse crescimento se mantiver até as semanas 13 a 15 (pico típico no país), podemos esperar entre 3,5 e 4,8 milhões de casos de dengue nessa temporada (semana 41 de 2024 a semana 40 de 2025). Esse número pode mudar em função de eventos que acelerem ou reduzam a transmissão.  Em relação à chikungunya, com número reprodutivo de `r paste(df_rt_chik_br$Rt, "[",df_rt_chik_br$lwr, df_rt_chik_br$upr,"]")`, calcula-se entre 120 e 350 mil casos na temporada. 
+\item Item 2
+\item Item 3
 \end{itemize}
 
-\vspace{2cm}
+<!-- \vspace{1cm} -->
 **Situação das Arboviroses no Brasil**
 
 Esse ano foram notificados até o momento, `r prettyNum(total_casos_ano_selecionado, big.mark=".", decimal.mark = ",", scientific=FALSE)` casos suspeitos de dengue e chikungunya, o que corresponde a uma incidência acumulada de `r prettyNum(round(incidencia_acumulada_ano_selecionado_dengue, 0), big.mark=".", decimal.mark = ",", scientific=FALSE)` casos de dengue e `r prettyNum(round(incidencia_acumulada_ano_selecionado_chik, 0), big.mark=".", decimal.mark = ",", scientific=FALSE)` casos de chikungunya por 100 mil habitantes. Para dengue, esse valor corresponde a `r prettyNum(round(dif_prop_ano_dengue, 2), big.mark=".", decimal.mark = ",", scientific=FALSE)` vezes o registrado no ano passado, enquanto para chikungunya, a `r prettyNum(round(dif_prop_ano_chik, 2), big.mark=".", decimal.mark = ",", scientific=FALSE)`.
@@ -370,7 +379,7 @@ Nas figuras 1 e 2 estão apresentadas as curvas de incidências e seus limiares 
 
 A curva de casos notificados  de dengue segue mantendo tendência de aumento de casos desde a SE 44, acima dos canais endêmicos. Houve uma aceleração na notificação após as festividades de final de ano. O número reprodutivo encontra-se entre 1,4 e 1,7 (estava 1,3 no final de 2024). Se mantido esse crescimento, um total de casos de dengue entre 3,5 e 4,8 milhões pode ser atingido durante essa temporada (ver explicações método ao final do Informe).  A curva de casos notificados de chikungunya  também mostra tendência de aumento mais acelerado, passando de Rt = 1,25 em dezembro, para Rt entre 1,5 e 1,6 em Janeiro. Com esse crescimento, um total de 120 a 350 mil casos desse agravo podem vir a ser notificados na temporada atual.
 
-```{r, fig.pos='H', fig.align="center", fig.width = 11, fig.height = 5}
+```{r, fig.pos='H', fig.align="center", fig.width = 12, fig.height = 5}
 get_map_mem_incidencia_br(
   df_uf_inc = df_dengue_nacional,
   df_uf_mem = memBR_dengue_chik %>% filter(arbovirose == "Dengue"),

@@ -1,4 +1,4 @@
-obter_siglas_codigos <- function(df, merge_by = "codigo"){
+obter_siglas_codigos <- function(df = NULL, merge_by = "codigo"){
   
   df_uf = data.frame(
     regiao = c("Norte", "Norte", "Norte", "Norte", "Norte", "Norte", "Nordeste",
@@ -22,8 +22,12 @@ obter_siglas_codigos <- function(df, merge_by = "codigo"){
     stringsAsFactors = FALSE 
   )
   
-  df <- df %>% 
-    left_join(df_uf, by = merge_by)
+  if(!is.null(df)){
+    df <- df %>% 
+      left_join(df_uf, by = merge_by)
+  }else{
+    df <- df_uf
+  }
   
   df$estado <- stringi::stri_unescape_unicode(df$estado)
   
@@ -262,6 +266,42 @@ obter_rt <- function(df, count_var, dist, mean, sd){
   return(result)
 }
 
+obter_rt_nacional <- function(df, arbo){
+  
+  df <- df %>% 
+    filter(arbovirose == arbo) %>% 
+    filter(substr(SE, 1, 4) == year(Sys.Date())) %>% 
+    dplyr::select(SE, casos, casos_est, pop) %>% 
+    group_by(SE) %>% 
+    reframe(
+      casos = sum(casos, na.rm = T),
+      casos_est = sum(casos_est, na.rm = T),
+      pop = sum(pop, na.rm = T),
+    ) %>% 
+    ungroup() %>% 
+    mutate(
+      inc = casos/pop *10^5,
+      inc_est = casos_est/pop *10^5, 
+    ) %>% 
+    arrange(SE) %>% 
+    data.frame() 
+  
+  result <- Rt(
+    df,
+    count = "casos_est", 
+    gtdist = "normal", meangt = 3, sdgt = 1
+  ) %>% 
+    tail(1) %>% 
+    mutate(
+      Rt = round(Rt, 2),
+      lwr = round(lwr, 2),
+      upr = round(upr, 2)
+    )
+  
+  return(result)
+  
+}
+
 # Revisar obter_classificacao_das_regionais
 obter_classificacao_das_regionais <- function(df_regional, tab_regional){
   
@@ -486,7 +526,7 @@ gg_bar_pop_risco <- function(df, por_regiao = T){
 }
 
 obter_mapa_risco_classif <- function(shape_mun, shape_state){
- 
+  
   g_map <- shape_mun %>% 
     ggplot() +
     geom_sf(aes(fill = status), color = "#ababab", show.legend=TRUE) +
@@ -665,7 +705,7 @@ construir_tabela_incidencia_por_semana <- function(df, var = "inc"){
 
 
 gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
-
+  
   # df <- tab_tendencia_por_uf_inc_observada_dengue
   
   df <- df %>% 
@@ -745,9 +785,93 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
   return(tabela)
 }
 
-gerar_tabela_tendencia_uf <- function(df){
+gerar_tabela_tendencia_flextable <- function(df, inc_obs_max = 10, inc_est_max = 10) {
   
-  df <- tabela_dengue_chik_uf
+  # Limpeza e renomeação das colunas
+  df <- df %>% 
+    janitor::clean_names() %>% 
+    rename_with(~ gsub("x", "semana_", .)) %>% 
+    mutate(tendencia = case_when(
+      tendencia == "down" ~ "↓",
+      tendencia == "up" ~ "↑",
+      TRUE ~ "→"
+    )) %>%
+    mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+    as.data.frame()
+  
+  semana_labels <- colnames(df)[5:12] %>% substr(12, 13) # Extrai os números das semanas
+  
+  # Renomeia as colunas para facilitar a leitura
+  # colnames(df) <- c("Regiao", "UF", "Rt", "tendencia",
+  #                   semana_labels)
+  
+  # Criação da tabela com flextable
+  tabela <- df %>% 
+    flextable() %>%
+    set_header_labels(values = 
+                        c("Região", "UF", "Rt", "Tendência",
+                          semana_labels)
+    ) %>% 
+    # Estilo geral
+    theme_booktabs() %>%
+    fontsize(size = 8, part = "all") %>%
+    set_table_properties(layout = "autofit") %>%
+    
+    # Formatação numérica
+    colformat_num(
+      col_keys = c(5:12), 
+      decimal.mark = ",", 
+      big.mark = ".",  
+      digits = 1
+    ) %>%
+    
+    # Cabeçalhos agrupados
+    add_header_row(
+      top = TRUE,
+      values = c("", "", "", "", "Incidência observada", "Incidência estimada"),
+      colwidths = c(1, 1, 1, 1, 4, 4)
+    ) %>%
+    
+    # Cores das células
+    bg(
+      j = 5:8,
+      bg = function(x) {
+        scales::col_numeric(
+          na.color = "#ffffff",
+          palette = c("#cffcb6", "#f9fbc6", "#ffd0b5", "#ffc3c3"),
+          domain = c(0, inc_obs_max)
+        )(as.numeric(x))
+      }
+    ) %>%
+    bg(
+      j = 9:12,
+      bg = function(x) {
+        scales::col_numeric(
+          palette = c("#cffcb6", "#f9fbc6", "#ffd0b5", "#ffc3c3"),
+          domain = c(0, inc_est_max)
+        )(as.numeric(x))
+      }
+    ) %>%
+    color(
+      j = "tendencia",
+      color = ifelse(
+        df$tendencia == "↑", "red",
+        ifelse(df$tendencia == "↓", "green", "blue")
+      )
+    ) %>% 
+    
+    # Estilos adicionais
+    bold(part = "header") %>%
+    align(align = "center", part = "all") %>%
+    border_outer() %>%
+    padding(padding = 3, part = "all")
+  
+  return(tabela)
+}
+
+
+
+gerar_tabela_tendencia_uf <- function(df){
   
   df <- df %>% 
     tibble() %>%
@@ -832,7 +956,7 @@ gerar_tabela_tendencia_uf <- function(df){
       style = list(cell_text(weight = "bold")),
       locations = cells_row_groups()
     )
-
+  
   return(tabela)
 }
 
@@ -926,9 +1050,64 @@ gerar_tabela_tendencia_uf <- function(df){
 #   return(tabela)
 # }
 
-gerar_tabela_tendencia_macro <- function(df, filter_arbo = "Dengue") {
+gerar_tabela_tendencia_macro <- function(df, table_type = "National", filter_arbo = NULL) {
   
-    # df <- tabela_dengue_chik_macro
+  # df <- tabela_dengue_chik_macro
+  
+  if(!is.null(filter_arbo)){
+    df <- df %>%
+      filter(arbovirose == filter_arbo) 
+  }
+  
+  df <- df %>%
+    arrange(regiao) %>%
+    group_by(regiao, arbovirose) %>%
+    mutate(
+      show_estado = if_else(row_number() > 1 & estado == lag(estado), "", estado),
+      Rtmean = round(Rtmean, 2)
+    ) %>%
+    ungroup() %>% 
+    dplyr::select(-show_estado) %>% 
+    set_names(
+      c(
+        "Região",
+        "Arbovirose",
+        "Estado",
+        "Macrorregional",
+        "Rt",
+        "Tendência"
+      )
+    )
+  
+  if(!table_type == "National"){
+    df <- df %>% 
+      dplyr::select("Arbovirose", "Macrorregional", "Rt", "Tendência")
+  }
+  
+  if(is.null(filter_arbo)){
+    tabela <- df %>%
+      dplyr::select(-c("Estado")) %>%
+      kable("latex", booktabs = TRUE, 
+            longtable = F, align = "c") %>%
+      kable_styling(latex_options = c("repeat_header", "hold_position"),
+                    font_size = 8) %>%
+      row_spec(0, bold = T, background = "#d3d3d3", color = "black")
+  }else{
+    tabela <- df %>%
+      dplyr::select(-c("Estado", "Arbovirose")) %>%
+      kable("latex", booktabs = TRUE, 
+            longtable = F, align = "c") %>%
+      kable_styling(latex_options = c("repeat_header", "hold_position"),
+                    font_size = 8) %>%
+      row_spec(0, bold = T, background = "#e0e0e0", color = "black")
+  }
+  
+  return(tabela)
+}
+
+gerar_tabela_tendencia_macro_flextable <- function(df, filter_arbo = "Dengue") {
+  
+  # df <- tabela_dengue_chik_macro
   #     filter(arbovirose == "Dengue")
   
   df <- df %>%
@@ -942,18 +1121,23 @@ gerar_tabela_tendencia_macro <- function(df, filter_arbo = "Dengue") {
     ungroup() %>% 
     relocate(show_estado, .after = "estado") %>% 
     dplyr::select(-c(estado, arbovirose))
-
   
-  tabela <- df %>%
-    kable("latex", booktabs = TRUE, 
-          col.names = c("Região",
-                        "Estado", 
-                        "Macrorregional",
-                        "Rt",
-                        "Tendência"),
-          longtable = TRUE, align = "c") %>%
-    kable_styling(latex_options = c("repeat_header", "hold_position"), font_size = 8) %>%
-    row_spec(0, bold = T, background = "#d1e2f2", color = "black")
+  tabela <- df %>% 
+    flextable() %>%
+    # Definir os nomes das colunas
+    set_header_labels(
+      regiao = "Região",
+      estado = "Estado",
+      macrorregional = "Macrorregional",
+      rt = "Rt",
+      tendencia = "Tendência"
+    ) %>%
+    bold(part = "header") %>% # Negrito no cabeçalho
+    bg(part = "header", bg = "#d1e2f2") %>% # Cor de fundo no cabeçalho
+    color(part = "header", color = "black") %>% # Cor do texto no cabeçalho
+    fontsize(size = 8, part = "all") %>% # Ajustar o tamanho da fonte
+    align(align = "center", part = "all") %>% # Centralizar texto
+    autofit()
   
   return(tabela)
 }
@@ -986,7 +1170,8 @@ gerar_grafico_inc <- function(df){
   return(chart)
 }
 
-get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se = 52, se_ahead = 0){
+get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem,
+                                   max_se = 52, se_ahead = 0, x_axis_label = T, y_axis_label = T, facet = TRUE){
   
   # df_uf_inc = df_dengue_uf
   # df_uf_mem = memUFsazonal
@@ -1058,8 +1243,35 @@ get_map_mem_incidencia <- function(df_uf_inc, df_uf_mem, df_limiar_mem, max_se =
       strip.text.x = element_text(size = 14, colour = "black"),
       strip.background = element_rect(fill = "white")
     ) +
-    labs(title = "", y = "Incidência", x = "Semana epidemiológica") +
-    facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y") 
+    scale_x_continuous(breaks = seq(min(df_uf$semana), max(df_uf$semana), by = 2)) +  # Define as quebras a cada 2 unidades
+    labs(title = "", x = "", y = "")
+  
+  # X axis label
+  if(x_axis_label == T){
+    g_map <- g_map +
+      labs(x = "Semana epidemiológica")
+  }else{
+    g_map <- g_map +
+      theme(
+        axis.title.x = element_blank()
+      )
+  }
+  
+  # Y axis label
+  if(y_axis_label == T){
+    g_map <- g_map +
+      labs(y = "Incidência")
+  }else{
+    g_map <- g_map +
+      theme(
+        axis.title.y = element_blank()
+      )
+  }
+  
+  if(facet == T){
+    g_map <- g_map +
+      facet_geo(~sigla, grid = "br_states_grid1", scales = "free_y") 
+  }
   
   return(g_map)
   

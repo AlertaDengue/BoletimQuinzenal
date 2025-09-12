@@ -13,6 +13,8 @@
 
 # Other files
 *.pdf
+*.png
+*.svg
 
 # User-specific files
 .Ruserdata
@@ -39,6 +41,7 @@ vignettes/*.pdf
 # knitr and R markdown default cache directories
 *_cache/
 /cache/
+figures/
 
 # Temporary files created by R markdown
 *.utf8.md
