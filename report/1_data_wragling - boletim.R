@@ -327,54 +327,45 @@ pred.casos.ac <- pred_se %>%
   mutate(se = epiweek(date)) %>%
   filter(se > 40 & se <= se_max_dengue) %>%  ## check that in 2025!!!!!!
   group_by(state) %>%
-  summarize(casos_e23 = sum(pred_ensemble_23),
-            casos_e24 = sum(pred_ensemble_24))
-
-# pegando os dados atuais, e nowcast (precisa de conexao) ----
-# if(exists(con)) {
-#   comando <- "SELECT municipio_geocodigo, \"SE\", casos, casprov, casos_est, pop, nivel 
-# FROM \"Municipio\".\"Historico_alerta\" WHERE \"SE\" > 202440"
-#   dd <- dbGetQuery(con, comando)  # conexao banco
-#   range(dd$SE)
-#   save(dd, file = "casos_atuais.RData")
-#   dbDisconnect(con)
-# }{message("carregar: dd <- tabela_historico com filtro SE > 202440")} 
-
-load("data/casos_atuais.RData")
+  summarize(
+    casos_e23 = sum(pred_ensemble_23),
+    casos_e24 = sum(pred_ensemble_24)
+  )
 
 # agregando casos municipais, por UF, na temporada, ate agora
-dd.uf <- dd %>% 
-  filter(SE > 202440) %>%
+dd.uf <- df_dengue_chik %>% 
+  filter(substr(SE, 1, 4) == substr(se_max_dengue, 1, 4)) %>%
   mutate(code_state = floor(municipio_geocodigo/10e4)) %>%
   group_by(code_state) %>%
-  summarise(casos = sum(casos), # casos notificados
-            casos_est = sum(casos_est), # casos not nowcasted
-            pop = sum(pop)) %>%
-  mutate(inc_prov = casos_est/pop * 1e5) %>% # incid not nowcasted 
+  summarise(
+    casos = sum(casos),
+    casos_est = sum(casos_est),
+    casprov = sum(casprov),   # utilizar essa
+    pop = sum(pop),
+    .groups = "drop" 
+  ) %>%
+  mutate(
+    prop_susp = casprov/casos,
+    inc_prov = casprov/pop * 1e5
+  ) %>%
   arrange(code_state)
 
-
-# para transformar em casos provaveis, vamos precisar usar o fator de correcao 
-# baseado na prop de casos prov do ultimo periodo (Eduardo)
-
-prop <- read.csv("data/prop_susp_prov.csv")
 
 # juntando tudo no objeto shape
 
 shapeNow <- states %>%
   left_join(pred.casos.ac, join_by(abbrev_state == state)) %>%
   left_join(dd.uf, join_by(code_state)) %>%
-  left_join(prop, join_by(abbrev_state == state)) %>%
-  mutate(casos_est_prov = round(casos_est * prop)) %>%
+  mutate(casos_est_prov = round(casos_est * prop_susp)) %>%
   arrange(code_state)
 
-shapeNow$color <- ifelse(shapeNow$casos_est_prov < shapeNow$casos_e23 &
-                           shapeNow$casos_est_prov < shapeNow$casos_e24,
+shapeNow$color <- ifelse(shapeNow$casprov < shapeNow$casos_e23 &
+                           shapeNow$casprov < shapeNow$casos_e24,
                          "blue", "red")
 
 # mapa de casos
 m4 <- ggplot() +
-  geom_sf(data = shapeNow, aes(fill = casos_est_prov)) +
+  geom_sf(data = shapeNow, aes(fill = casprov)) +
   scale_fill_viridis_c(option = "viridis",
                        oob = scales::squish, 
                        trans = "log",
@@ -434,7 +425,7 @@ m6 <- ggplot(data = shapeNow, aes(x = factor(code_state))) +
   geom_point(aes(y = casos_e24), color = "black", shape = "_", size = 3) +
   geom_segment(aes(x = factor(code_state), xend = factor(code_state), 
                    y = casos_e23, yend = casos_e24), color = "black") +
-  geom_point(aes(y = casos_est_prov), color = shapeNow$color, shape = 16, size = 2) +
+  geom_point(aes(y = casprov), color = shapeNow$color, shape = 16, size = 2) +
   #geom_point(aes(y = casos_est), color = "blue", shape = 16, size = 2) +
   scale_y_log10() +  
   scale_x_discrete(labels = shapeNow$abbrev_state) +

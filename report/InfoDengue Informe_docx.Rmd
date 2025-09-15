@@ -10,6 +10,7 @@ fontsize: 12pt
 ```{r, comment = "", setup, include = FALSE}
 require(flextable)
 require(officer)
+library(glue)
 knitr::opts_chunk$set(message = FALSE, echo = FALSE, 
                       dpi = 300, warning = FALSE)
 
@@ -261,20 +262,27 @@ prop_casos_provaveis_total <- paste0(round(((total_casos_provaveis_ano_seleciona
 
 dif_prop_ano_total <- (total_casos_ano_selecionado_dengue + total_casos_ano_selecionado_chik)/(total_casos_ano_anterior_dengue + total_casos_ano_anterior_chik)
 
-tabela_1 <- data.frame(
+tab1 <- data.frame(
   agravo = c("Chikungunya", "Dengue", "Total"),
   casos_suspeitos = c(total_casos_ano_selecionado_chik, total_casos_ano_selecionado_dengue, total_casos_ano_selecionado),
   percentual_casos_suspeitos = c(prop_casos_provaveis_dengue, prop_casos_provaveis_chik, prop_casos_provaveis_total),
   var_relacao_ano_anterior = paste0(round(c(dif_prop_ano_chik, dif_prop_ano_dengue, dif_prop_ano_total)*100,2),"%")
-) %>%
-  set_names(c("Doença", "Casos Registrados", "Porcentagem de Casos Prováveis", "Variação em relação ao Ano Passado")) %>% # Mudando os nomes das colunas
+) 
+
+tabela_1 <- tab1 %>%
+  set_names(
+    c(
+      "Doença", "Casos Registrados",
+      "Porcentagem de Casos Prováveis",
+      "Variação em relação ao Ano Passado")
+  ) %>% 
   flextable() %>%
   theme_vanilla() %>%
   bold(part = "header") %>%
   align(align = "center", part = "all") %>%
   bg(bg = "#d1e2f2", part = "header") %>%
   color(color = "black", part = "header") %>%
-   width(j = 1, width = 1.5) %>% 
+  width(j = 1, width = 1.5) %>% 
   width(j = 2, width = 1.5) %>% 
   width(j = 3, width = 1.5) %>%   
   width(j = 4, width = 1.8)
@@ -287,11 +295,92 @@ titulo_relatorio <- paste0("(Semana epidemiológica ", ultima_semana_dengue, ")"
 ```
 
 ```{r}
-# Obter rt nacional
-df_rt_dengue_br <- obter_rt_nacional(df_dengue_chik, arbo = "Dengue")
-df_rt_chik_br <- obter_rt_nacional(df_dengue_chik, arbo = "Chikungunya")
+gerar_texto_boletim <- function(df_rt_dengue_br, df_rt_chik_br, shape_dengue, shape_chik) {
+  
+  # ---- TEXTO INTRODUTÓRIO ----
+  dengue_rt_atual <- df_rt_dengue_br$Rt
+  incidencia_atual <- round(df_rt_dengue_br$inc_est, 1)
+  
+  # Determinar o status baseado no Rt e incidência
+  status_transmissao <- if (dengue_rt_atual < 1 && incidencia_atual < 20) {
+    "encontra-se em patamar estável"
+  } else if (dengue_rt_atual >= 1 && incidencia_atual < 50) {
+    "apresenta sinais de crescimento"
+  } else if (incidencia_atual >= 50) {
+    "encontra-se em período epidêmico"
+  } else {
+    "apresenta comportamento moderado"
+  }
+  
+  periodo_desc <- if (dengue_rt_atual < 1 && incidencia_atual < 20) {
+    "Trata-se do período inter-epidêmico nacional da dengue."
+  } else if (dengue_rt_atual >= 1) {
+    "Observa-se tendência de crescimento da transmissão."
+  } else {
+    "O cenário requer monitoramento contínuo."
+  }
+  
+  texto_intro <- glue(
+    "- A notificação de dengue no país {status_transmissao} com um número reprodutivo de ",
+    "{round(dengue_rt_atual, 2)} e uma incidência de notificação de dengue de aproximadamente ",
+    "{incidencia_atual} casos por 100.000 habitantes por semana. {periodo_desc}"
+  )
+  
+  # ---- DENGUE ----
+  dengue_rt <- df_rt_dengue_br$Rt
+  dengue_trend <- ifelse(dengue_rt > 1, "cresce", "diminui")
+  dengue_range <- glue("{round(dengue_rt, 2)} [{round(df_rt_dengue_br$lwr, 2)}, {round(df_rt_dengue_br$upr, 2)}]")
+  
+  regioes_dengue_alta <- shape_dengue %>%
+    filter(!is.na(status), status == "Alto" | status == "Muito alto") %>%
+    distinct(regiao, sigla)
+  
+  texto_regioes_dengue <- if (nrow(regioes_dengue_alta) > 0) {
+    regioes_str <- paste(unique(regioes_dengue_alta$sigla), collapse = ", ")
+    glue("há um leve aumento de casos nas regiões {unique(regioes_dengue_alta$regiao)} ({regioes_str}).")
+  } else {
+    "não há sinais relevantes de aumento regional no momento."
+  }
+  
+  texto_dengue <- glue(
+    "- A notificação de dengue no país {dengue_trend} com um número reprodutivo de {dengue_range}. ",
+    "Se esse {ifelse(dengue_rt > 1, 'crescimento', 'declínio')} se mantiver até as semanas 13 a 15 (pico típico no país), ",
+    "podemos esperar entre 3,5 e 4,8 milhões de casos de dengue nessa temporada (semana 41 de 2024 a semana 40 de 2025). ",
+    "A incidência por UF de dengue está baixa (< 20 por 100.000 hab), mas {texto_regioes_dengue} ",
+    "Das {nrow(shape_dengue)} regionais analisadas, ",
+    "a maioria tem casos abaixo do limiar (", sum(shape_dengue$nivel == 0, na.rm = TRUE), 
+    "), mas ", sum(shape_dengue$nivel > 0, na.rm = TRUE), 
+    " delas estão com alta incidência e em ascensão."
+  )
+  
+  # ---- CHIKUNGUNYA ----
+  chik_rt <- df_rt_chik_br$Rt
+  chik_trend <- ifelse(chik_rt > 1, "cresce", "diminui")
+  chik_range <- glue("{round(chik_rt, 2)} [{round(df_rt_chik_br$lwr, 2)}, {round(df_rt_chik_br$upr, 2)}]")
+  
+  regioes_chik_alta <- shape_chik %>%
+    filter(!is.na(status), status == "Alto" | status == "Muito alto") %>%
+    distinct(regiao, sigla)
+  
+  texto_regioes_chik <- if (nrow(regioes_chik_alta) > 0) {
+    regioes_str <- paste(unique(regioes_chik_alta$sigla), collapse = ", ")
+    glue("mostra alguns sinais de aumento nas regiões {unique(regioes_chik_alta$regiao)} ({regioes_str}).")
+  } else {
+    "não há sinais relevantes de aumento regional no momento."
+  }
+  
+  texto_chik <- glue(
+    "- Em relação à chikungunya, com número reprodutivo de {chik_range}, ",
+    "estima-se entre 120 e 350 mil casos na temporada. ",
+    "A incidência de chikungunya está baixa no geral (< 10 casos por 100.000 hab), mas {texto_regioes_chik} ",
+    "Das {nrow(shape_chik)} regionais analisadas, ",
+    "a maioria tem casos baixos, mas ", sum(shape_chik$nivel > 0, na.rm = TRUE),
+    " estão com alta incidência e em crescimento."
+  )
+  
+  glue("{texto_intro}\n\n{texto_dengue}\n\n{texto_chik}")
+}
 ```
-
 
 ::: {custom-style="Centralizado e negrito"}
 INFORME INFODENGUE
@@ -326,9 +415,11 @@ Os dados provenientes dos sistemas de notificação de casos podem conter erros 
 \newpage
 ### **PRINCIPAIS PONTOS EM DESTAQUE**  
 
-- A notificação de dengue no país `r ifelse(df_rt_dengue_br$Rt, "cresce", "diminui")` com um número reprodutivo de `r paste(df_rt_dengue_br$Rt, "[",df_rt_dengue_br$lwr, df_rt_dengue_br$upr,"]")`. Se esse crescimento se mantiver até as semanas 13 a 15 (pico típico no país), podemos esperar entre 3,5 e 4,8 milhões de casos de dengue nessa temporada (semana 41 de 2024 a semana 40 de 2025). Esse número pode mudar em função de eventos que acelerem ou reduzam a transmissão.  Em relação à chikungunya, com número reprodutivo de `r paste(df_rt_chik_br$Rt, "[",df_rt_chik_br$lwr, df_rt_chik_br$upr,"]")`, calcula-se entre 120 e 350 mil casos na temporada;
-- Item 2;
-- Item 3. 
+```{r echo=FALSE, results='asis'}
+texto_boletim <- gerar_texto_boletim_1(df_rt_dengue_br, df_rt_chik_br, shape_dengue, shape_chik)
+texto_formatado <- gsub("\n", "\n\n", texto_boletim)
+cat(texto_formatado)
+```
 
 ### **Situação das Arboviroses no Brasil**  
 
@@ -416,7 +507,7 @@ No Nordeste, a notificação desse agravo encontra-se baixa para a época.
 No Centro-Oeste, MT, MS e GO estão com notificação acima do limiar epidêmico, com forte tendência de subida em MT e MS. 
 
 No Sudeste, observa-se SP e MG com notificação acima do limiar epidêmico e tendência de aumento.
- 
+
 No Sul, o Paraná entra em alerta, com notificação acima do limiar epidêmico.
 
 ```{r, fig.width = 11, fig.height = 12}
@@ -609,9 +700,9 @@ tabela_chik_uf <- map_dfr(
 )
 
 tabela_rt_dengue_chik_uf <- tabela_dengue_uf %>% 
-      mutate(arbovirose = "Dengue") %>% 
+  mutate(arbovirose = "Dengue") %>% 
   bind_rows(tabela_chik_uf %>% 
-      mutate(arbovirose = "Chikungunya"))
+              mutate(arbovirose = "Chikungunya"))
 
 # %>% 
 #   filter(tendencia %in% c("Crescente", "Crescente leve")) %>% 
@@ -668,7 +759,7 @@ tab_tendencia_por_uf_inc_observada_dengue <- tabela_tendencia_por_uf_inc_observa
   mutate(
     Rtmean = round(Rtmean, 2),
     tendencia = add_arrows(Rtmean, ref = 1)
-    ) %>% 
+  ) %>% 
   relocate(Rtmean, .after = sigla) %>% 
   relocate(tendencia, .after = Rtmean) %>% 
   bind_cols(tabela_tendencia_por_uf_inc_estimada_dengue %>% 
@@ -755,7 +846,7 @@ tab_tendencia_por_uf_inc_observada_chik <-  tabela_tendencia_por_uf_inc_observad
   mutate(
     Rtmean = round(Rtmean, 2),
     tendencia = add_arrows(Rtmean, ref = 1)
-    ) %>% 
+  ) %>% 
   relocate(Rtmean, .after = sigla) %>% 
   relocate(tendencia, .after = Rtmean) %>% 
   bind_cols(tabela_tendencia_por_uf_inc_estimada_chik %>% 
@@ -810,7 +901,7 @@ Observa-se que, em termos absolutos, a maior frequência de casos na temporada f
 combined_plots456
 ```
 
-**Figura 10.** (A) Número estimado de casos prováveis, (B) incidência acumulada; e (C) Casos prov[aveis estimados de dengue.
+**Figura 10.** (A) Número estimado de casos prováveis, (B) incidência acumulada; e (C) Casos prováveis estimados de dengue.
 :::
 
 ## **Previsão para as próximas 3 semanas**
@@ -819,7 +910,7 @@ combined_plots456
 Para gerar predições de curto prazo, são treinados semanalmente três modelos de predição: o primeiro é baseado em redes neurais LSTM, o segundo utiliza processos gaussianos, e o último é um modelo ARIMA não sazonal e univariado. Esses modelos foram aplicados aos casos prováveis a nível de Unidade da Federação (UF) no Brasil, sendo treinado um modelo para cada UF e outro para o Brasil como um todo.
 
 A figura 11 mostra as previsões para as próximas 3 semanas. Em termos de incidência, o maior risco encontra-se em SP e MG, seguido de GO, MT, RJ. Em termos de total de casos no período (Fig B), espera-se menos do que o previsto nos modelos ensembles de temporada, em 15 dos 27 estados (pontos azuis). Os demais estados aparecem com estimativas entre o esperado pelos dois forecasts, sendo que AP, AC, PA estão um pouco acima do esperado, mas ainda dentro da faixa de incerteza.  
- 
+
 ```{r, fig.width = 12, fig.height = 14}
 combined_plot78
 ```

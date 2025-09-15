@@ -725,14 +725,14 @@ gerar_tabela_tendencia <- function(df, inc_obs_max = 10, inc_est_max = 10){
       columns = 5:8, #4:7
       colors = scales::col_numeric(alpha = T,
                                    na.color = "#ffffff",
-                                   c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
+                                   c("#d9e3fa",  "#bbcdfa", "#99b2f0", "#a086fc"), 
                                    domain = range(0, inc_obs_max))
     ) %>% 
     data_color(
       columns = 8:12, #9:12
       colors = scales::col_numeric(alpha = T,
                                    na.color = "#ffffff",
-                                   c("#cffcb6",  "#f9fbc6", "#ffd0b5", "#ffc3c3"), 
+                                   c("#d9e3fa",  "#bbcdfa", "#99b2f0", "#a086fc"), 
                                    domain = range(0, inc_est_max))
     ) %>% 
     cols_label(
@@ -838,7 +838,7 @@ gerar_tabela_tendencia_flextable <- function(df, inc_obs_max = 10, inc_est_max =
       bg = function(x) {
         scales::col_numeric(
           na.color = "#ffffff",
-          palette = c("#cffcb6", "#f9fbc6", "#ffd0b5", "#ffc3c3"),
+          palette = c("#d9e3fa",  "#bbcdfa", "#7a9ffa", "#a086fc"),
           domain = c(0, inc_obs_max)
         )(as.numeric(x))
       }
@@ -847,7 +847,7 @@ gerar_tabela_tendencia_flextable <- function(df, inc_obs_max = 10, inc_est_max =
       j = 9:12,
       bg = function(x) {
         scales::col_numeric(
-          palette = c("#cffcb6", "#f9fbc6", "#ffd0b5", "#ffc3c3"),
+          palette = c("#d9e3fa",  "#bbcdfa", "#7a9ffa", "#a086fc"),,
           domain = c(0, inc_est_max)
         )(as.numeric(x))
       }
