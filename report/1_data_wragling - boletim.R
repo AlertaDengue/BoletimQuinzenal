@@ -321,11 +321,13 @@ combined_plots123 <- (m1 | m2) /
   plot_annotation(title = "Previsões para a temporada 2024-25 (médias dos modelos)")
 
 # dados e modelos para a temporada ate agora ----
-pred_se <- read.csv("data/ensemble_bayes_2025.csv") # forecast por semana
+pred_se <- read.csv("data/ensemble_bayes_2025.csv") 
+
+data_min_ensemble <- min(pred_se$date, na.rm = T)
+data_atual <- ymd(substr(max(df_dengue_chik$data_iniSE, na.rm = T), 1, 10))
 
 pred.casos.ac <- pred_se %>%
-  mutate(se = epiweek(date)) %>%
-  filter(se > 40 & se <= se_max_dengue) %>%  ## check that in 2025!!!!!!
+  filter(date <= data_atual) %>%
   group_by(state) %>%
   summarize(
     casos_e23 = sum(pred_ensemble_23),
@@ -334,7 +336,8 @@ pred.casos.ac <- pred_se %>%
 
 # agregando casos municipais, por UF, na temporada, ate agora
 dd.uf <- df_dengue_chik %>% 
-  filter(substr(SE, 1, 4) == substr(se_max_dengue, 1, 4)) %>%
+  filter(arbovirose == "Dengue") %>%
+  filter(data_iniSE >= data_min_ensemble) %>%
   mutate(code_state = floor(municipio_geocodigo/10e4)) %>%
   group_by(code_state) %>%
   summarise(
