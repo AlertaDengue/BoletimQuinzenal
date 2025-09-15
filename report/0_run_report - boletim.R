@@ -34,10 +34,10 @@ output_file = paste0(output_directory, output_filename)
 ##
 
 ### .pdf
-rmarkdown::render(input = "report/InfoDengue Informe_pdf.Rmd",
-                  output_file = output_file,
-                  output_format = "pdf_document",
-                  clean = T)
+# rmarkdown::render(input = "report/InfoDengue Informe_pdf.Rmd",
+#                   output_file = output_file,
+#                   output_format = "pdf_document",
+#                   clean = T)
 
 if(!"custom-template_copia.docx" %in% dir("template")){
   file.copy("template/custom-template.docx", "template/custom-template_copia.docx", overwrite = TRUE)
@@ -48,10 +48,10 @@ rmarkdown::render(input = "report/InfoDengue Informe_docx.Rmd",
                   clean = T)
 
 #### Fazer upload para a pasta especificada drive_get('Informe Infodengue/boletins estaduais')$id[1]
-drive_upload(
-  media = paste0(output_file, ".pdf"),
-  path = as_id("1gFVYW5oCkKc5WQ8FVikKaGRrv_1lT-tR"),
-  overwrite = T)
+# drive_upload(
+#   media = paste0(output_file, ".pdf"),
+#   path = as_id("1gFVYW5oCkKc5WQ8FVikKaGRrv_1lT-tR"),
+#   overwrite = T)
 
 drive_upload(
   media = paste0(output_file, ".docx"),
