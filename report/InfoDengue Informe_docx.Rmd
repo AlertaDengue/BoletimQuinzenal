@@ -28,7 +28,7 @@ Informe da situação das arboviroses urbanas no Brasil
 
 `r titulo_relatorio`
 
-*Análises com base nos dados inseridos no SINAN ONLINE até o dia `r ultima_semana_dengue_formatado`.*  
+*Análises com base nos dados inseridos no SINAN ONLINE até o dia `r ultima_semana_dengue_formatado`.*  g
 
 
 **AVISOS:**

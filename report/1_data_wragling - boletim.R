@@ -1175,5 +1175,4 @@ tabela_dengue_chik_macro <- tabela_dengue_macro %>%
   ) %>% 
   arrange(regiao, arbovirose)
 
-
 toc()
