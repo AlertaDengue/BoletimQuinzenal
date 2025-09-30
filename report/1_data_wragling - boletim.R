@@ -150,7 +150,7 @@ memBR_dengue_chik <- curveMEM %>%
   ) %>% 
   ungroup() %>% 
   mutate(
-    SEe = SEe+ 40,
+    SEe = SEe + 40,
     SEe = ifelse(SEe > 52, SEe - 52, SEe)
   )
 
@@ -182,6 +182,11 @@ memUFsazonal <- memUFsazonal %>%
 memMacroanual <- memMacroanual %>% 
   rename(macroregional_id = nome) %>%
   mutate(macroregional_id = as.character(macroregional_id)) 
+
+df_rt_dengue_br <- obter_rt_nacional(df_dengue_chik, 
+                                     arbo = "Dengue")
+df_rt_chik_br <- obter_rt_nacional(df_dengue_chik, 
+                                   arbo = "Chikungunya")
 
 ## Chikv
 memUFanual.chi <- memUFanual.chi %>% 
@@ -475,12 +480,12 @@ ens3w <- pred_se %>%
   filter(state != "BR")
 
 # pegando dado de pop para calcular incidencia
-pop <- dd.uf[, c("code_state","pop")]
+df_pop <- dd.uf[, c("code_state","pop")]
 
 shape_short <- states %>%
   left_join(short.pred, join_by(abbrev_state == state)) %>%
   left_join(ens3w, join_by(abbrev_state == state)) %>%
-  left_join(pop) %>%
+  left_join(df_pop) %>%
   mutate(inc3w = pred3w/pop*1e5) %>%
   arrange(code_state)
 
@@ -666,18 +671,6 @@ df_dengue_chik_estados <- df_dengue_chik %>%
   ) %>% 
   rename(codigo = municipio_geocodigo) 
 
-df_pop <- df_dengue_chik_estados %>% 
-  filter(arbovirose == "Dengue") %>% 
-  dplyr::select(codigo, ano, pop) %>% 
-  group_by(codigo, ano) %>% 
-  reframe(
-    pop = sum(pop, na.rm = T)
-  ) %>% 
-  mutate(
-    id = paste(codigo, ano, sep = "_")
-  ) %>% 
-  dplyr::select(-c(codigo, ano))
-
 df_dengue_chik_estados_casos <- df_dengue_chik_estados %>% 
   group_by(arbovirose, codigo, ano) %>% 
   reframe(
@@ -705,7 +698,10 @@ df_dengue_chik_estados_casos_atual <- df_dengue_chik_estados %>%
 
 df_dengue_chik_estados <- df_dengue_chik_estados_casos %>% 
   bind_rows(df_dengue_chik_estados_casos_atual) %>% 
-  left_join(df_pop, by = "id") %>% 
+  left_join(df_pop %>% 
+              rename("codigo" = "code_state") %>% 
+              mutate(codigo = as.character(codigo)),
+            by = "codigo") %>% 
   mutate(
     inc = casos/pop * 100000
   ) %>% 
@@ -863,7 +859,7 @@ dif_prop_ano_total <- (total_casos_ano_selecionado_dengue + total_casos_ano_sele
 tab1 <- data.frame(
   agravo = c("Chikungunya", "Dengue", "Total"),
   casos_suspeitos = c(total_casos_ano_selecionado_chik, total_casos_ano_selecionado_dengue, total_casos_ano_selecionado),
-  percentual_casos_suspeitos = c(prop_casos_provaveis_dengue, prop_casos_provaveis_chik, prop_casos_provaveis_total),
+  percentual_casos_suspeitos = c(prop_casos_provaveis_chik, prop_casos_provaveis_dengue, prop_casos_provaveis_total),
   var_relacao_ano_anterior = paste0(round(c(dif_prop_ano_chik, dif_prop_ano_dengue, dif_prop_ano_total)*100,2),"%")
 ) 
 
@@ -938,9 +934,9 @@ gerar_texto_boletim_1 <- function(df_rt_dengue_br, df_rt_chik_br, shape_dengue, 
   
   texto_dengue <- glue(
     "- A notificação de dengue no país {dengue_trend} com um número reprodutivo de {dengue_range}. ",
-    "Se esse {ifelse(dengue_rt > 1, 'crescimento', 'declínio')} se mantiver até as semanas 13 a 15 (pico típico no país), ",
-    "podemos esperar entre 3,5 e 4,8 milhões de casos de dengue nessa temporada (semana 41 de 2024 a semana 40 de 2025). ",
-    "A incidência por UF de dengue está baixa (< 20 por 100.000 hab), mas {texto_regioes_dengue} ",
+    # "Se esse {ifelse(dengue_rt > 1, 'crescimento', 'declínio')} se mantiver até as próximas semanas, ",
+    # "podemos esperar entre 3,5 e 4,8 milhões de casos de dengue nessa temporada (semana 41 de 2024 a semana 40 de 2025). ",
+    # "A incidência por UF de dengue está baixa (< 20 por 100.000 hab), mas {texto_regioes_dengue} ",
     "Das {nrow(shape_dengue)} regionais analisadas, ",
     "a maioria tem casos abaixo do limiar (", sum(shape_dengue$nivel == 0, na.rm = TRUE), 
     "), mas ", sum(shape_dengue$nivel > 0, na.rm = TRUE), 
@@ -964,10 +960,10 @@ gerar_texto_boletim_1 <- function(df_rt_dengue_br, df_rt_chik_br, shape_dengue, 
   }
   
   texto_chik <- glue(
-    "- Em relação à chikungunya, com número reprodutivo de {chik_range}, ",
-    "estima-se entre 120 e 350 mil casos na temporada. ",
-    "A incidência de chikungunya está baixa no geral (< 10 casos por 100.000 hab), mas {texto_regioes_chik} ",
-    "Das {nrow(shape_chik)} regionais analisadas, ",
+    # "- Em relação à chikungunya, com número reprodutivo de {chik_range}, ",
+    # "estima-se entre 120 e 350 mil casos na temporada. ",
+    # "A incidência de chikungunya está baixa no geral (< 10 casos por 100.000 hab), mas {texto_regioes_chik} ",
+    # "Das {nrow(shape_chik)} regionais analisadas, ",
     "a maioria tem casos baixos, mas ", sum(shape_chik$nivel > 0, na.rm = TRUE),
     " estão com alta incidência e em crescimento."
   )

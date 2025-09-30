@@ -2,8 +2,7 @@ r_pkgs <- c("tidyverse", "AlertTools", "sf", "arrow", "geobr",
             "ggplot2", "ggpubr", "geofacet", "cowplot", "lubridate",
             "janitor", "kableExtra", "xtable", "data.table",
             "gt", "gtExtras", "patchwork", "googledrive", "tictoc",
-            "scales", "cowplot")
-
+            "scales", "cowplot", "glue", "flextable", "officer")
 
 if(!"pacman" %in% rownames(installed.packages())) install.packages("pacman")
 pacman::p_load(char = r_pkgs)

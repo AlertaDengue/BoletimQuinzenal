@@ -15,6 +15,7 @@ suppressPackageStartupMessages({
   library(lubridate)
   library(data.table)
   library(scales)
+  library(glue)
   library(viridis)
   library(purrr)  # Para a função walk
 })

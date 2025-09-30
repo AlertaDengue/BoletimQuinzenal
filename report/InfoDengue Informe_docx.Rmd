@@ -10,7 +10,6 @@ fontsize: 12pt
 ```{r, comment = "", setup, include = FALSE}
 require(flextable)
 require(officer)
-library(glue)
 knitr::opts_chunk$set(message = FALSE, echo = FALSE, 
                       dpi = 300, warning = FALSE)
 
