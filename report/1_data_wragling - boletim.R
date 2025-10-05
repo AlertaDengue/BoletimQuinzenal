@@ -78,6 +78,18 @@ df_dengue_chik <- df_dengue %>%
   filter(SE != 202401)
 rm(df_dengue, df_chik)
 
+df_pop <- df_dengue_chik %>% 
+  dplyr::select(municipio_geocodigo, pop) %>% 
+  dplyr::distinct(municipio_geocodigo, .keep_all = T) %>% 
+  mutate(
+    code_state = as.numeric(substr(municipio_geocodigo, 1, 2))
+  ) %>% 
+  dplyr::select(-municipio_geocodigo) %>% 
+  group_by(code_state) %>% 
+  reframe(
+    pop = sum(pop, na.rm = T)
+  )
+
 # df_macro_dengue_chik <- df_dengue_chik %>% 
 #   group_by(arbovirose, macroregional, macroregional_id, SE) %>% 
 #   reframe(
@@ -349,9 +361,9 @@ dd.uf <- df_dengue_chik %>%
     casos = sum(casos),
     casos_est = sum(casos_est),
     casprov = sum(casprov),   # utilizar essa
-    pop = sum(pop),
     .groups = "drop" 
   ) %>%
+  left_join(df_pop, by = "code_state") %>% 
   mutate(
     prop_susp = casprov/casos,
     inc_prov = casprov/pop * 1e5
@@ -479,8 +491,6 @@ ens3w <- pred_se %>%
             ens24w = sum(pred_ensemble_24)) %>%
   filter(state != "BR")
 
-# pegando dado de pop para calcular incidencia
-df_pop <- dd.uf[, c("code_state","pop")]
 
 shape_short <- states %>%
   left_join(short.pred, join_by(abbrev_state == state)) %>%
@@ -667,12 +677,10 @@ df_dengue_chik_estados <- df_dengue_chik %>%
     arbovirose = factor(arbovirose, levels = c("Dengue", "Chikungunya")),
     ano = substr(SE, 1, 4),
     municipio_geocodigo = substr(municipio_geocodigo, 1, 2),
-    municipio_geocodigo = as.character(municipio_geocodigo)
+    municipio_geocodigo = as.character(municipio_geocodigo),
   ) %>% 
-  rename(codigo = municipio_geocodigo) 
-
-df_dengue_chik_estados_casos <- df_dengue_chik_estados %>% 
-  group_by(arbovirose, codigo, ano) %>% 
+  rename(codigo = municipio_geocodigo) %>% 
+  group_by(arbovirose, codigo, ano, SE) %>% 
   reframe(
     casos = sum(casos, na.rm = T)
   ) %>% 
@@ -682,35 +690,34 @@ df_dengue_chik_estados_casos <- df_dengue_chik_estados %>%
   mutate(
     ano = as.numeric(ano),
     grupo = ifelse(ano ==  max(ano), max(ano), paste0(min(ano),"-",max(ano)-1))
-  ) 
-
-df_dengue_chik_estados_casos_atual <- df_dengue_chik_estados %>% 
-  filter(SE == max(se_max_dengue, se_max_chik)) %>% 
-  group_by(arbovirose, codigo, ano) %>% 
-  reframe(
-    casos = sum(casos, na.rm = T)
-  )  %>% 
-  mutate(
-    id = paste(codigo, ano, sep = "_"),
-    ano = as.numeric(ano),
-    grupo = "Semana\natual"
-  ) 
-
-df_dengue_chik_estados <- df_dengue_chik_estados_casos %>% 
-  bind_rows(df_dengue_chik_estados_casos_atual) %>% 
+  ) %>% 
   left_join(df_pop %>% 
               rename("codigo" = "code_state") %>% 
               mutate(codigo = as.character(codigo)),
             by = "codigo") %>% 
   mutate(
     inc = casos/pop * 100000
-  ) %>% 
+  )
+
+df_dengue_chik_estados_casos <- df_dengue_chik_estados %>%
+  group_by(arbovirose, codigo, ano) %>%
+  filter(inc == max(inc, na.rm = T))
+
+df_dengue_chik_estados_casos_atual <- df_dengue_chik_estados %>% 
+  filter(SE == max(se_max_dengue, se_max_chik)) %>% 
   mutate(
-    grupo = factor(grupo, 
-                   levels = c(
-                     paste0(min(ano),"-",max(ano)-1),
-                     max(ano), 
-                     "Semana\natual")
+    id = paste(codigo, ano, sep = "_"),
+    ano = as.numeric(ano),
+    grupo = "Semana\natual"
+  ) 
+
+grupo_levels = df_dengue_chik_estados_casos %>% 
+  bind_rows(df_dengue_chik_estados_casos_atual) %>% pull(grupo) %>% unique()
+
+df_dengue_chik_estados <- df_dengue_chik_estados_casos %>% 
+  bind_rows(df_dengue_chik_estados_casos_atual) %>% 
+  mutate(
+    grupo = factor(grupo, levels = grupo_levels
     )
   ) %>% 
   obter_siglas_codigos() 
@@ -1172,3 +1179,4 @@ tabela_dengue_chik_macro <- tabela_dengue_macro %>%
   arrange(regiao, arbovirose)
 
 toc()
+

@@ -174,8 +174,20 @@ Na figura 5 e 6 estão representadas os picos das incidências anuais de dengue 
 ```{r, fig.width = 12, fig.height = 4}
 df_dengue_chik_estados %>% 
   filter(arbovirose == "Dengue") %>% 
-  gg_timeline_dots()
+  gg_timeline_dots() +
+  facet_grid2(~regiao, 
+              scales = "free_x", 
+              space   = "free_x",   # <- isso libera o tamanho
+              switch  = "x") +
+  theme(
+    strip.placement = "outside",
+    strip.background = element_blank(),
+    strip.text.x = element_text(size = 12, face = "bold"),
+    panel.spacing = unit(0, "lines"),
+    panel.border = element_rect(colour = "black", fill = NA, linetype = "dashed")
+  )
 ```
+
 
 **Figura 5.** Pico da incidência por 100 mil habitantes sobre os casos notificados de dengue até a semana `r ultima_semana_dengue`.
 
@@ -184,7 +196,18 @@ df_dengue_chik_estados %>%
 ```{r, fig.width = 12, fig.height = 4}
 df_dengue_chik_estados %>% 
   filter(arbovirose == "Chikungunya") %>% 
-  gg_timeline_dots()
+  gg_timeline_dots() +
+  facet_grid2(~regiao, 
+              scales = "free_x", 
+              space   = "free_x",   # <- isso libera o tamanho
+              switch  = "x") +
+  theme(
+    strip.placement = "outside",
+    strip.background = element_blank(),
+    strip.text.x = element_text(size = 12, face = "bold"),
+    panel.spacing = unit(0, "lines"),
+    panel.border = element_rect(colour = "black", fill = NA, linetype = "dashed")
+  )
 ```
 
 **Figura 6.** Pico da incidência por 100 mil habitantes sobre os casos notificados de chikungunya até a semana `r ultima_semana_dengue`.

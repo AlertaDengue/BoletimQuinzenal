@@ -560,7 +560,7 @@ gg_timeline_dots <- function(df, se_max = se_max){
   
   order <- df %>% 
     arrange(desc(inc)) %>% 
-    distinct(sigla) %>% pull()
+    pull(sigla) %>% unique()
   
   df <- df %>% 
     mutate(sigla = factor(sigla, levels = order))
